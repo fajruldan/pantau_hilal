@@ -441,11 +441,10 @@
         const MAX_TRAIL_POINTS = 200;
         let isInitialized = false;
 
-        // Label Negara
+        // Label Negara (Diperbarui menjadi 30 negara terkenal)
         let countryLabels = [];
         const COUNTRIES = [
             { name: "Indonesia", lat: -0.789, lon: 113.921 },
-            { name: "Malaysia", lat: 4.210, lon: 101.975 },
             { name: "Jepang", lat: 36.204, lon: 138.252 },
             { name: "Australia", lat: -25.274, lon: 133.775 },
             { name: "Amerika Serikat", lat: 37.090, lon: -95.712 },
@@ -466,34 +465,15 @@
             { name: "Korea Selatan", lat: 35.907, lon: 127.766 },
             { name: "Italia", lat: 41.871, lon: 12.567 },
             { name: "Spanyol", lat: 40.463, lon: -3.749 },
-            { name: "Selandia Baru", lat: -40.900, lon: 174.885 },
             { name: "Thailand", lat: 15.870, lon: 100.992 },
-            { name: "Vietnam", lat: 14.058, lon: 108.277 },
-            { name: "Filipina", lat: 12.879, lon: 121.774 },
             { name: "Singapura", lat: 1.352, lon: 103.819 },
-            { name: "Iran", lat: 32.427, lon: 53.688 },
-            { name: "Pakistan", lat: 30.375, lon: 69.345 },
             { name: "Nigeria", lat: 9.081, lon: 8.675 },
-            { name: "Kenya", lat: -0.023, lon: 37.906 },
-            { name: "Maroko", lat: 31.791, lon: -7.092 },
-            { name: "Kolombia", lat: 4.570, lon: -74.297 },
             { name: "Peru", lat: -9.189, lon: -75.015 },
-            { name: "Chile", lat: -35.675, lon: -71.542 },
-            { name: "Swedia", lat: 60.128, lon: 18.643 },
-            { name: "Norwegia", lat: 60.472, lon: 8.468 },
-            { name: "Ukraina", lat: 48.379, lon: 31.165 },
-            { name: "Polandia", lat: 51.919, lon: 19.145 },
-            { name: "Yunani", lat: 39.074, lon: 21.824 },
-            { name: "Belanda", lat: 52.132, lon: 5.291 },
+            { name: "Selandia Baru", lat: -40.900, lon: 174.885 },
+            { name: "Iran", lat: 32.427, lon: 53.688 },
             { name: "Swiss", lat: 46.818, lon: 8.227 },
-            { name: "Kazakhstan", lat: 48.019, lon: 66.923 },
             { name: "UEA", lat: 23.424, lon: 53.847 },
-            { name: "Portugal", lat: 39.399, lon: -8.224 },
-            { name: "Madagaskar", lat: -18.766, lon: 46.869 },
-            { name: "Kuba", lat: 21.521, lon: -77.781 },
-            { name: "Islandia", lat: 64.963, lon: -19.020 },
-            { name: "Papua Nugini", lat: -6.314, lon: 143.955 },
-            { name: "Greenland", lat: 71.706, lon: -42.604 }
+            { name: "Belanda", lat: 52.132, lon: 5.291 }
         ];
 
         // Status Klik Objek (Raycaster)
@@ -613,7 +593,15 @@
         function updateCalendars() {
             const now = new Date();
             uiDateMasehi.innerText = formatMasehi.format(now);
-            uiDateHijriah.innerText = formatHijriah.format(now) + ' H';
+            
+            // Mengambil tanggal Hijriah dari API
+            let rawHijriah = formatHijriah.format(now);
+            
+            // Bersihkan teks dari akhiran "H" atau "AH" bawaan browser agar tidak dobel
+            let cleanHijriah = rawHijriah.replace(/\s*(AH|H)$/i, '');
+            
+            // Tambahkan huruf H tunggal dengan konsisten
+            uiDateHijriah.innerText = cleanHijriah + ' H';
         }
 
         // --- Pemuatan Sumber Daya ---
@@ -686,7 +674,7 @@
             };
 
             earth = new THREE.Mesh(earthGeo, earthMat);
-            earth.rotation.y = -Math.PI / 2;
+            // Rotasi Bumi yang menyebabkan misalignment sejauh 90 derajat telah dihapus
             scene.add(earth);
 
             // Awan & Atmosfer
@@ -836,13 +824,15 @@
         }
 
         // --- Logika & Matematika Inti ---
+        // RUMUS YANG TELAH DIPERBAIKI UNTUK ALIGNMENT 100% PRESISI PADA BOLA THREE.JS
         function latLonToVector3(lat, lon, radius) {
             const phi = (90 - lat) * (Math.PI / 180);
-            const theta = (lon + 90) * (Math.PI / 180);
+            const theta = lon * (Math.PI / 180);
 
+            // Perhitungan Cartesian yang benar untuk mapping SphereGeometry standar
             const x = radius * Math.sin(phi) * Math.cos(theta);
             const y = radius * Math.cos(phi);
-            const z = radius * Math.sin(phi) * Math.sin(theta);
+            const z = -radius * Math.sin(phi) * Math.sin(theta);
 
             return new THREE.Vector3(x, y, z);
         }
@@ -895,8 +885,6 @@
                 moon.position.copy(moonPos);
                 // Agar bulan selalu menghadap Bumi (Tidal Locking)
                 moon.lookAt(new THREE.Vector3(0,0,0));
-                // Sedikit koreksi putaran agar teksturnya pas
-                moon.rotateY(-Math.PI / 2); 
             }
 
             // 3. Perbarui UI Bulan & Hilal
@@ -1003,6 +991,12 @@
             let targetVec = new THREE.Vector3(0, 0, 0); // Default ke Bumi
             if (focusTarget === 'moon' && moon) {
                 targetVec.copy(moon.position);
+                controls.minDistance = 3.5; // Jarak zoom dekat khusus untuk bulan
+            } else {
+                controls.minDistance = EARTH_RADIUS + 1.5; // Cegah kamera menembus masuk ke dalam Bumi
+                if (camera.position.length() < EARTH_RADIUS + 1.5) {
+                    camera.position.setLength(EARTH_RADIUS + 1.5);
+                }
             }
             controls.target.lerp(targetVec, 0.1);
 
