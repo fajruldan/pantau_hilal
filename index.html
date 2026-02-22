@@ -230,6 +230,19 @@
             animation: blink 1.5s infinite;
         }
 
+        /* Gaya untuk Label Nama Negara */
+        .country-label {
+            color: rgba(255, 255, 255, 0.85);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            pointer-events: none; /* Agar tidak menghalangi klik ke Bumi */
+            text-shadow: 1px 1px 3px #000, -1px -1px 3px #000, 1px -1px 3px #000, -1px 1px 3px #000; /* Outline hitam tebal */
+            transition: opacity 0.3s ease-out;
+            letter-spacing: 1px;
+        }
+
         @keyframes pulse {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 240, 255, 0); }
@@ -391,6 +404,7 @@
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
         // --- Elemen DOM ---
         const uiLat = document.getElementById('ui-lat');
@@ -418,7 +432,7 @@
         const POLL_INTERVAL = 5000;
 
         // --- Status ---
-        let scene, camera, renderer, composer, controls;
+        let scene, camera, renderer, composer, controls, labelRenderer;
         let earth, clouds, atmosphere;
         let issGroup, issTargetPos = new THREE.Vector3();
         let moonGroup, moon;
@@ -426,6 +440,61 @@
         let trailGeometry, trailLine, trailPositions = [];
         const MAX_TRAIL_POINTS = 200;
         let isInitialized = false;
+
+        // Label Negara
+        let countryLabels = [];
+        const COUNTRIES = [
+            { name: "Indonesia", lat: -0.789, lon: 113.921 },
+            { name: "Malaysia", lat: 4.210, lon: 101.975 },
+            { name: "Jepang", lat: 36.204, lon: 138.252 },
+            { name: "Australia", lat: -25.274, lon: 133.775 },
+            { name: "Amerika Serikat", lat: 37.090, lon: -95.712 },
+            { name: "Brasil", lat: -14.235, lon: -51.925 },
+            { name: "Inggris", lat: 55.378, lon: -3.435 },
+            { name: "Afrika Selatan", lat: -30.559, lon: 22.937 },
+            { name: "Rusia", lat: 61.524, lon: 105.318 },
+            { name: "Cina", lat: 35.861, lon: 104.195 },
+            { name: "India", lat: 20.593, lon: 78.962 },
+            { name: "Arab Saudi", lat: 23.885, lon: 45.079 },
+            { name: "Mesir", lat: 26.820, lon: 30.802 },
+            { name: "Kanada", lat: 56.130, lon: -106.346 },
+            { name: "Argentina", lat: -38.416, lon: -63.616 },
+            { name: "Meksiko", lat: 23.634, lon: -102.552 },
+            { name: "Perancis", lat: 46.227, lon: 2.213 },
+            { name: "Jerman", lat: 51.165, lon: 10.451 },
+            { name: "Turki", lat: 38.963, lon: 35.243 },
+            { name: "Korea Selatan", lat: 35.907, lon: 127.766 },
+            { name: "Italia", lat: 41.871, lon: 12.567 },
+            { name: "Spanyol", lat: 40.463, lon: -3.749 },
+            { name: "Selandia Baru", lat: -40.900, lon: 174.885 },
+            { name: "Thailand", lat: 15.870, lon: 100.992 },
+            { name: "Vietnam", lat: 14.058, lon: 108.277 },
+            { name: "Filipina", lat: 12.879, lon: 121.774 },
+            { name: "Singapura", lat: 1.352, lon: 103.819 },
+            { name: "Iran", lat: 32.427, lon: 53.688 },
+            { name: "Pakistan", lat: 30.375, lon: 69.345 },
+            { name: "Nigeria", lat: 9.081, lon: 8.675 },
+            { name: "Kenya", lat: -0.023, lon: 37.906 },
+            { name: "Maroko", lat: 31.791, lon: -7.092 },
+            { name: "Kolombia", lat: 4.570, lon: -74.297 },
+            { name: "Peru", lat: -9.189, lon: -75.015 },
+            { name: "Chile", lat: -35.675, lon: -71.542 },
+            { name: "Swedia", lat: 60.128, lon: 18.643 },
+            { name: "Norwegia", lat: 60.472, lon: 8.468 },
+            { name: "Ukraina", lat: 48.379, lon: 31.165 },
+            { name: "Polandia", lat: 51.919, lon: 19.145 },
+            { name: "Yunani", lat: 39.074, lon: 21.824 },
+            { name: "Belanda", lat: 52.132, lon: 5.291 },
+            { name: "Swiss", lat: 46.818, lon: 8.227 },
+            { name: "Kazakhstan", lat: 48.019, lon: 66.923 },
+            { name: "UEA", lat: 23.424, lon: 53.847 },
+            { name: "Portugal", lat: 39.399, lon: -8.224 },
+            { name: "Madagaskar", lat: -18.766, lon: 46.869 },
+            { name: "Kuba", lat: 21.521, lon: -77.781 },
+            { name: "Islandia", lat: 64.963, lon: -19.020 },
+            { name: "Papua Nugini", lat: -6.314, lon: 143.955 },
+            { name: "Greenland", lat: 71.706, lon: -42.604 }
+        ];
 
         // Status Klik Objek (Raycaster)
         let raycaster, mouse;
@@ -465,6 +534,14 @@
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.2;
             container.appendChild(renderer.domElement);
+
+            // Inisialisasi CSS2D Renderer (Untuk Teks Nama Negara)
+            labelRenderer = new CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0px';
+            labelRenderer.domElement.style.pointerEvents = 'none'; // Abaikan klik agar tembus ke WebGL
+            container.appendChild(labelRenderer.domElement);
 
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
@@ -658,6 +735,9 @@
             moon = new THREE.Mesh(moonGeo, moonMat);
             scene.add(moon);
 
+            // Label Negara
+            createCountryLabels();
+
             // ISS & Jejak
             createISSMarker();
 
@@ -736,6 +816,23 @@
             issGroup.add(panel1);
             issGroup.add(panel2);
             scene.add(issGroup);
+        }
+
+        function createCountryLabels() {
+            COUNTRIES.forEach(country => {
+                const div = document.createElement('div');
+                div.className = 'country-label';
+                div.textContent = country.name;
+                
+                const label = new CSS2DObject(div);
+                // Tempatkan sedikit melayang di atas permukaan (Radius + 0.1)
+                const pos = latLonToVector3(country.lat, country.lon, EARTH_RADIUS + 0.1);
+                label.position.copy(pos);
+                earth.add(label);
+                
+                // Simpan untuk perhitungan visibilitas di animasi
+                countryLabels.push({ label: label, pos: pos, div: div });
+            });
         }
 
         // --- Logika & Matematika Inti ---
@@ -874,6 +971,7 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight); // Perbarui ukuran label juga
             composer.setSize(window.innerWidth, window.innerHeight);
         }
 
@@ -908,8 +1006,24 @@
             }
             controls.target.lerp(targetVec, 0.1);
 
+            // Perhitungan Visibilitas Label Negara (Sembunyikan yang di balik bumi)
+            const cameraPosLocal = new THREE.Vector3();
+            cameraPosLocal.copy(camera.position);
+            earth.worldToLocal(cameraPosLocal); // Konversi posisi kamera ke koordinat rotasi Bumi
+
+            countryLabels.forEach(data => {
+                // Gunakan Dot Product untuk mengecek apakah label menghadap kamera
+                const dot = cameraPosLocal.clone().normalize().dot(data.pos.clone().normalize());
+                if (dot > 0.2) { // Batas pandang (0.2 agar menghilang halus sebelum di ujung lengkungan)
+                    data.div.style.opacity = '1';
+                } else {
+                    data.div.style.opacity = '0';
+                }
+            });
+
             controls.update();
             composer.render();
+            labelRenderer.render(scene, camera); // Render Teks
         }
 
         window.onload = init;
