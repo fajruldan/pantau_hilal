@@ -4,48 +4,48 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Pelacak Orbit ISS & Hilal</title>
-    <link rel="icon" type="image/png" href="/hilal.png" />
     <style>
-        /* ===== CSS SAMA SEPERTI SEBELUMNYA (tidak diubah) ===== */
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-        }
         :root {
-            --primary: #00f0ff;
-            --secondary: #ffaa00;
-            --bg-glass: rgba(10, 15, 30, 0.55);
-            --border-glass: rgba(0, 240, 255, 0.2);
-            --border-glass-alt: rgba(255, 170, 0, 0.2);
-            --text-main: #e0f7fa;
-            --radius: 14px;
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            --cyan: #00e5ff;
+            --amber: #ffb300;
+            --bg-panel: rgba(15, 20, 25, 0.65);
+            --border-panel: rgba(255, 255, 255, 0.1);
+            --text-main: #f0f0f0;
+            --text-muted: #a0aab5;
+            --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Courier New', monospace;
         }
-        html,
-        body {
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+
+        body, html {
             width: 100%;
-            min-height: 100vh;
+            height: 100vh;
             overflow: hidden;
-            background: #000;
-            font-family: 'Courier New', Courier, monospace;
+            background-color: #020205;
+            font-family: var(--font-ui);
             color: var(--text-main);
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
+
+        /* 3D Canvas */
         #canvas-container {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
             z-index: 1;
-            touch-action: none;
         }
+
+        /* UI Overlay */
         #ui-layer {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
@@ -55,494 +55,232 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 12px 12px 10px;
-            box-sizing: border-box;
-            overflow-y: auto;
+            padding: 1rem;
         }
-        #ui-layer::-webkit-scrollbar {
-            width: 3px;
-            background: transparent;
-        }
-        #ui-layer::-webkit-scrollbar-thumb {
-            background: rgba(0, 240, 255, 0.3);
-            border-radius: 10px;
-        }
-        .top-container {
+
+        /* Header / Top Section */
+        .header-section {
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            width: 100%;
-            justify-content: center;
-            pointer-events: none;
-        }
-        .glass-panel {
-            background: var(--bg-glass);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid var(--border-glass);
-            border-radius: var(--radius);
-            padding: 14px 16px;
-            box-shadow: var(--shadow), inset 0 0 10px rgba(0, 240, 255, 0.04);
+            justify-content: space-between;
+            align-items: flex-start;
             pointer-events: auto;
-            width: 100%;
-            max-width: 420px;
-            flex: 1 1 280px;
-            transition: all 0.2s;
         }
-        .glass-panel.lunar {
-            border-color: var(--border-glass-alt);
-            box-shadow: var(--shadow), inset 0 0 10px rgba(255, 170, 0, 0.04);
+
+        .title-box {
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border-panel);
+            padding: 10px 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
-        .header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-        .pulse-dot {
-            width: 10px;
-            height: 10px;
-            background: var(--primary);
-            border-radius: 50%;
-            box-shadow: 0 0 10px var(--primary);
-            animation: pulse 2s infinite;
-            flex-shrink: 0;
-        }
-        .pulse-dot.lunar {
-            background: var(--secondary);
-            box-shadow: 0 0 10px var(--secondary);
-            animation: pulse-lunar 2s infinite;
-        }
-        h1 {
-            margin: 0;
-            font-size: 0.95rem;
-            font-weight: 600;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
-            line-height: 1.2;
-        }
-        h1.lunar-title {
-            color: var(--secondary);
-            text-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
-        }
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px 14px;
-        }
-        .metric {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-width: 0;
-        }
-        .metric-label {
-            font-size: 0.6rem;
-            color: rgba(224, 247, 250, 0.55);
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-        }
-        .metric-value {
+
+        .title-box h1 {
             font-size: 1rem;
-            font-weight: bold;
-            color: #fff;
-            text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .title-box p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* Panels Container */
+        .panels-container {
             display: flex;
-            align-items: baseline;
-            gap: 3px;
-            flex-wrap: wrap;
-            word-break: break-word;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+            pointer-events: auto;
         }
-        .metric-unit {
-            font-size: 0.65rem;
-            color: var(--primary);
-            font-weight: normal;
-            white-space: nowrap;
+
+        .panel {
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border-panel);
+            border-radius: 16px;
+            padding: 16px;
+            width: 320px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            transition: transform 0.3s ease;
         }
-        .lunar .metric-unit {
-            color: var(--secondary);
-        }
-        .calendar-section {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-bottom: 12px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border-glass-alt);
-        }
-        .calendar-section .metric-value {
-            font-size: 0.9rem;
-        }
-        .calendar-section .metric-value#ui-date-hijriah {
-            color: var(--secondary);
-        }
-        .legend-section {
-            margin-top: 12px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border-glass);
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .legend-item {
+
+        .panel-header {
             display: flex;
             align-items: center;
             gap: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
-        .legend-icon {
+
+        .dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            flex-shrink: 0;
+            box-shadow: 0 0 8px currentColor;
         }
-        .legend-text {
-            font-size: 0.6rem;
-            color: rgba(224, 247, 250, 0.7);
-            letter-spacing: 0.3px;
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        .bottom-container {
-            width: 100%;
+
+        /* Grid Data */
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .data-item {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            margin-top: auto;
-            padding-top: 10px;
-            pointer-events: none;
+            gap: 4px;
         }
-        .bottom-bar {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            pointer-events: auto;
-        }
-        .bottom-bar .glass-panel {
-            max-width: 260px;
-            padding: 6px 14px;
-            flex: 1 1 auto;
-            text-align: center;
-        }
-        .bottom-bar .glass-panel .metric-label {
-            font-size: 0.55rem;
-        }
-        .bottom-bar .glass-panel #ui-time {
-            font-size: 0.8rem;
-            margin-top: 2px;
-            color: #fff;
-            letter-spacing: 0.5px;
-        }
-        .controls-hint {
-            font-size: 0.6rem;
-            color: rgba(224, 247, 250, 0.4);
-            letter-spacing: 0.5px;
-            text-align: center;
-            padding: 6px 14px !important;
-        }
-        .credit {
-            text-align: center;
-            font-size: 0.55rem;
-            color: rgba(224, 247, 250, 0.25);
-            letter-spacing: 1.5px;
-            pointer-events: none;
-            padding: 4px 0 2px;
-            width: 100%;
-        }
-        .country-label {
-            color: rgba(255, 255, 255, 0.85);
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 10px;
-            font-weight: bold;
+
+        .data-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
             text-transform: uppercase;
-            pointer-events: none;
-            text-shadow: 1px 1px 3px #000, -1px -1px 3px #000, 1px -1px 3px #000, -1px 1px 3px #000;
-            transition: opacity 0.3s ease;
-            letter-spacing: 0.8px;
-            white-space: nowrap;
+            letter-spacing: 0.5px;
         }
+
+        .data-value {
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .data-unit {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .full-width { grid-column: span 2; }
+
+        /* Specific Colors */
+        .iss-theme { color: var(--cyan); }
+        .hilal-theme { color: var(--amber); }
+
+        .date-text { font-size: 0.85rem; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            font-size: 0.75rem;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        /* 3D Labels */
+        .country-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-family: var(--font-ui);
+            font-size: 11px;
+            font-weight: 500;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px #000, -1px -1px 2px #000;
+            transition: opacity 0.2s ease;
+            letter-spacing: 0.5px;
+        }
+
+        /* Loader */
         #loader {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #050810;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #020205;
             z-index: 50;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            transition: opacity 0.9s ease-out;
+            transition: opacity 0.6s ease;
         }
-        .spinner {
-            width: 44px;
-            height: 44px;
-            border: 3px solid rgba(0, 240, 255, 0.1);
-            border-top: 3px solid var(--primary);
+        
+        .ring {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(0, 229, 255, 0.1);
+            border-top: 3px solid var(--cyan);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 1.5rem;
+            margin-bottom: 16px;
         }
-        .loading-text {
-            font-size: 0.75rem;
-            letter-spacing: 2.5px;
-            color: var(--primary);
-            animation: blink 1.5s infinite;
-            text-align: center;
-            padding: 0 1rem;
+
+        .loader-text {
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--cyan);
+            animation: pulse 1.5s infinite;
         }
-        @keyframes pulse {
-            0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7);
-            }
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 10px rgba(0, 240, 255, 0);
-            }
-            100% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(0, 240, 255, 0);
-            }
-        }
-        @keyframes pulse-lunar {
-            0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(255, 170, 0, 0.7);
-            }
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 10px rgba(255, 170, 0, 0);
-            }
-            100% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(255, 170, 0, 0);
-            }
-        }
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-        @keyframes blink {
-            0%,
-            100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.4;
-            }
-        }
-        @media (max-width: 820px) {
+
+        /* Animations */
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 50% { opacity: 0.5; } }
+
+        /* --- RESPONSIVE MOBILE FIX --- */
+        @media (max-width: 768px) {
             #ui-layer {
-                padding: 8px 8px 6px;
-                overflow-y: auto;
-                pointer-events: auto;
+                padding: 12px;
             }
-            .glass-panel {
-                padding: 10px 12px;
-                max-width: 100%;
-                flex: 1 1 100%;
+            
+            .title-box {
+                width: 100%;
+                text-align: center;
+                padding: 8px 12px;
             }
-            .top-container {
-                flex-direction: column;
-                align-items: stretch;
+            
+            .title-box h1 { font-size: 0.9rem; }
+            
+            .panels-container {
+                flex-direction: row;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                gap: 12px;
+                padding-bottom: 8px; /* For scrollbar */
+                /* Hiding scrollbar for cleaner look */
+                -ms-overflow-style: none; 
+                scrollbar-width: none; 
+            }
+            .panels-container::-webkit-scrollbar { display: none; }
+            
+            .panel {
+                min-width: 85vw; /* Almost full width on mobile */
+                scroll-snap-align: center;
+                padding: 14px;
+                background: rgba(15, 20, 25, 0.8); /* Slightly darker for readability */
+            }
+
+            .data-grid { gap: 10px; }
+            .data-value { font-size: 0.85rem; }
+            .panel-header { margin-bottom: 10px; padding-bottom: 6px; }
+        }
+        
+        /* Landscape Mobile */
+        @media (max-height: 500px) and (orientation: landscape) {
+            #ui-layer { flex-direction: row; padding: 10px; }
+            .header-section { width: auto; }
+            .panels-container { 
+                flex-direction: column; 
+                width: 280px; 
+                overflow-y: auto; 
+                justify-content: flex-start;
                 gap: 8px;
             }
-            .metrics-grid {
-                gap: 6px 10px;
-            }
-            .metric-value {
-                font-size: 0.85rem;
-            }
-            .metric-label {
-                font-size: 0.5rem;
-            }
-            h1 {
-                font-size: 0.75rem;
-                letter-spacing: 1px;
-            }
-            .calendar-section .metric-value {
-                font-size: 0.75rem;
-            }
-            .bottom-bar {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 6px;
-            }
-            .bottom-bar .glass-panel {
-                max-width: 100%;
-                padding: 6px 10px;
-            }
-            .controls-hint {
-                font-size: 0.5rem;
-                padding: 5px 10px !important;
-            }
-            .legend-text {
-                font-size: 0.5rem;
-            }
-            .country-label {
-                font-size: 8px !important;
-            }
-            .credit {
-                font-size: 0.45rem;
-            }
-            .pulse-dot {
-                width: 8px;
-                height: 8px;
-            }
-        }
-        @media (max-width: 480px) {
-            #ui-layer {
-                padding: 5px 5px 4px;
-            }
-            .glass-panel {
-                padding: 8px 10px;
-                border-radius: 10px;
-            }
-            .header {
-                gap: 6px;
-                margin-bottom: 8px;
-            }
-            h1 {
-                font-size: 0.6rem;
-                letter-spacing: 0.5px;
-            }
-            .metrics-grid {
-                gap: 4px 8px;
-                grid-template-columns: 1fr 1fr;
-            }
-            .metric-value {
-                font-size: 0.7rem;
-            }
-            .metric-label {
-                font-size: 0.45rem;
-            }
-            .metric-unit {
-                font-size: 0.5rem;
-            }
-            .calendar-section {
-                gap: 4px;
-                margin-bottom: 8px;
-                padding-bottom: 6px;
-            }
-            .calendar-section .metric-value {
-                font-size: 0.65rem;
-            }
-            .legend-section {
-                margin-top: 8px;
-                padding-top: 6px;
-                gap: 3px;
-            }
-            .legend-text {
-                font-size: 0.45rem;
-            }
-            .legend-icon {
-                width: 6px;
-                height: 6px;
-            }
-            .bottom-bar .glass-panel #ui-time {
-                font-size: 0.65rem;
-            }
-            .controls-hint {
-                font-size: 0.45rem;
-                padding: 4px 8px !important;
-            }
-            .credit {
-                font-size: 0.4rem;
-            }
-            .country-label {
-                font-size: 6px !important;
-                letter-spacing: 0.3px;
-            }
-        }
-        @media (max-width: 380px) {
-            .metrics-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 3px 6px;
-            }
-            .metric-value {
-                font-size: 0.6rem;
-            }
-            .glass-panel {
-                padding: 6px 8px;
-            }
-            h1 {
-                font-size: 0.5rem;
-            }
-        }
-        @media (max-height: 600px) and (orientation: landscape) {
-            #ui-layer {
-                padding: 4px 8px;
-                flex-direction: row;
-                flex-wrap: wrap;
-                align-content: flex-start;
-                gap: 4px;
-                overflow-y: auto;
-            }
-            .top-container {
-                flex-direction: row;
-                flex-wrap: wrap;
-                gap: 4px;
-            }
-            .glass-panel {
-                padding: 6px 10px;
-                flex: 1 1 200px;
-                max-width: 320px;
-            }
-            .header {
-                margin-bottom: 4px;
-            }
-            h1 {
-                font-size: 0.55rem;
-            }
-            .metrics-grid {
-                gap: 2px 6px;
-            }
-            .metric-value {
-                font-size: 0.65rem;
-            }
-            .metric-label {
-                font-size: 0.4rem;
-            }
-            .calendar-section {
-                margin-bottom: 4px;
-                padding-bottom: 4px;
-            }
-            .calendar-section .metric-value {
-                font-size: 0.6rem;
-            }
-            .legend-section {
-                margin-top: 4px;
-                padding-top: 4px;
-            }
-            .bottom-container {
-                margin-top: 0;
-                padding-top: 2px;
-            }
-            .bottom-bar .glass-panel {
-                padding: 3px 8px;
-            }
-            .bottom-bar .glass-panel #ui-time {
-                font-size: 0.6rem;
-            }
-            .controls-hint {
-                font-size: 0.4rem;
-                padding: 3px 8px !important;
-            }
-            .credit {
-                font-size: 0.35rem;
-                padding: 0;
-            }
+            .panel { width: 100%; min-width: unset; padding: 10px; }
         }
     </style>
 
+    <!-- Import Map Three.js (No PostProcessing needed now) -->
     <script type="importmap">
         {
             "imports": {
@@ -554,318 +292,208 @@
 </head>
 <body>
 
-    <!-- LOADER -->
+    <!-- Loader -->
     <div id="loader">
-        <div class="spinner"></div>
-        <div class="loading-text" id="loading-status">MENGINISIALISASI SISTEM…</div>
+        <div class="ring"></div>
+        <div class="loader-text" id="loading-status">INISIALISASI 3D...</div>
     </div>
 
-    <!-- UI OVERLAY -->
+    <!-- UI Layer -->
     <div id="ui-layer">
-        <div class="top-container">
-
-            <!-- Panel ISS -->
-            <div class="glass-panel" id="top-panel">
-                <div class="header">
-                    <div class="pulse-dot"></div>
-                    <h1>Telemetri Orbit ISS</h1>
-                </div>
-                <div class="metrics-grid">
-                    <div class="metric">
-                        <span class="metric-label">Garis Lintang</span>
-                        <span class="metric-value" id="ui-lat">--.----<span class="metric-unit">°</span></span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Garis Bujur</span>
-                        <span class="metric-value" id="ui-lon">--.----<span class="metric-unit">°</span></span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Kecepatan</span>
-                        <span class="metric-value" id="ui-vel">--<span class="metric-unit">km/h</span></span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Ketinggian</span>
-                        <span class="metric-value" id="ui-alt">--<span class="metric-unit">km</span></span>
-                    </div>
-                </div>
-                <div class="legend-section">
-                    <div class="legend-item">
-                        <div class="legend-icon" style="background:#00ffff;box-shadow:0 0 8px #00ffff;"></div>
-                        <span class="legend-text">Suar Biru: Posisi ISS (Satelit)</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-icon" style="background:#ffffff;box-shadow:0 0 10px #ffffff;"></div>
-                        <span class="legend-text">Suar Putih: Pantulan Matahari di Lautan</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Panel Hilal / Waktu -->
-            <div class="glass-panel lunar" id="right-panel">
-                <div class="header">
-                    <div class="pulse-dot lunar"></div>
-                    <h1 class="lunar-title">Sistem Waktu &amp; Hilal</h1>
-                </div>
-
-                <div class="calendar-section">
-                    <div class="metric">
-                        <span class="metric-label">Kalender Masehi</span>
-                        <span class="metric-value" id="ui-date-masehi" style="font-size:0.9rem;">Memuat…</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Kalender Hijriah</span>
-                        <span class="metric-value" id="ui-date-hijriah" style="font-size:0.9rem;color:var(--secondary);">Memuat…</span>
-                    </div>
-                </div>
-
-                <div class="metrics-grid">
-                    <div class="metric">
-                        <span class="metric-label">Umur Bulan</span>
-                        <span class="metric-value" id="ui-moon-age">--.-<span class="metric-unit"> Hr</span></span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Fase Iluminasi</span>
-                        <span class="metric-value" id="ui-moon-phase">--.--<span class="metric-unit">%</span></span>
-                    </div>
-                    <div class="metric" style="grid-column:span 2;">
-                        <span class="metric-label">Sudut Elongasi</span>
-                        <span class="metric-value" id="ui-moon-el">--.-<span class="metric-unit">°</span></span>
-                    </div>
-                    <div class="metric" style="grid-column:span 2;">
-                        <span class="metric-label">Status Rukyatul Hilal (Global)</span>
-                        <span class="metric-value" id="ui-hilal-status" style="font-size:0.9rem;margin-top:2px;">Menganalisis…</span>
-                    </div>
-                </div>
+        
+        <!-- Header -->
+        <div class="header-section">
+            <div class="title-box">
+                <h1>Sistem Pelacak Astro</h1>
+                <p id="ui-time">--:--:-- UTC</p>
             </div>
         </div>
 
-        <!-- BOTTOM -->
-        <div class="bottom-container">
-            <div class="bottom-bar">
-                <div class="glass-panel" style="padding:6px 14px;">
-                    <div class="metric-label">Titik Sub-Solar (UTC)</div>
-                    <div style="font-size:0.8rem;margin-top:2px;" id="ui-time">--:--:--</div>
+        <!-- Panels Container -->
+        <div class="panels-container">
+            
+            <!-- Panel ISS -->
+            <div class="panel">
+                <div class="panel-header iss-theme">
+                    <div class="dot" style="background: var(--cyan);"></div>
+                    <span class="panel-title">Telemetri ISS</span>
                 </div>
-                <div class="controls-hint glass-panel" style="padding:6px 14px;">
-                    Geser ↻ • Gulir 🔍 • Klik Bulan/Bumi untuk Fokus
+                <div class="data-grid">
+                    <div class="data-item">
+                        <span class="data-label">Garis Lintang</span>
+                        <span class="data-value iss-theme" id="ui-lat">--.----°</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Garis Bujur</span>
+                        <span class="data-value iss-theme" id="ui-lon">--.----°</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Kecepatan</span>
+                        <span class="data-value" id="ui-vel">-- <span class="data-unit">km/h</span></span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Ketinggian</span>
+                        <span class="data-value" id="ui-alt">-- <span class="data-unit">km</span></span>
+                    </div>
                 </div>
             </div>
-            <div class="credit">Developed by Fajrul Ramadhan U.</div>
+
+            <!-- Panel Hilal -->
+            <div class="panel">
+                <div class="panel-header hilal-theme">
+                    <div class="dot" style="background: var(--amber);"></div>
+                    <span class="panel-title">Sistem Hilal & Waktu</span>
+                </div>
+                <div class="data-grid">
+                    <div class="data-item full-width">
+                        <span class="data-value date-text" id="ui-date-masehi">Memuat...</span>
+                        <span class="data-value date-text hilal-theme" id="ui-date-hijriah" style="margin-top:2px;">Memuat...</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Umur Bulan</span>
+                        <span class="data-value" id="ui-moon-age">--.- <span class="data-unit">Hari</span></span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Iluminasi</span>
+                        <span class="data-value" id="ui-moon-phase">--.- <span class="data-unit">%</span></span>
+                    </div>
+                    <div class="data-item full-width">
+                        <span class="data-label">Sudut Elongasi</span>
+                        <span class="data-value" id="ui-moon-el">--.-°</span>
+                    </div>
+                    <div class="data-item full-width">
+                        <span class="data-label">Status Rukyatul Hilal</span>
+                        <div class="status-badge" id="ui-hilal-status">Menganalisis...</div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- 3D CONTAINER -->
+    <!-- 3D Canvas -->
     <div id="canvas-container"></div>
 
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-        // ─── DOM refs ───
-        const $ = (id) => document.getElementById(id);
-        const uiLat = $('ui-lat'),
-            uiLon = $('ui-lon'),
-            uiVel = $('ui-vel'),
-            uiAlt = $('ui-alt'),
-            uiTime = $('ui-time');
-        const uiMoonAge = $('ui-moon-age'),
-            uiMoonPhase = $('ui-moon-phase'),
-            uiMoonEl = $('ui-moon-el'),
-            uiHilalStatus = $('ui-hilal-status');
-        const uiDateMasehi = $('ui-date-masehi'),
-            uiDateHijriah = $('ui-date-hijriah');
-        const loader = document.getElementById('loader'),
-            loadingStatus = document.getElementById('loading-status');
+        // --- DOM Elements ---
+        const el = (id) => document.getElementById(id);
+        const uiTime = el('ui-time'), uiLat = el('ui-lat'), uiLon = el('ui-lon'), uiVel = el('ui-vel'), uiAlt = el('ui-alt');
+        const uiDateMasehi = el('ui-date-masehi'), uiDateHijriah = el('ui-date-hijriah');
+        const uiMoonAge = el('ui-moon-age'), uiMoonPhase = el('ui-moon-phase'), uiMoonEl = el('ui-moon-el'), uiHilalStatus = el('ui-hilal-status');
+        const loader = el('loader'), loadingStatus = el('loading-status');
 
-        // ─── Konfig ───
-        const EARTH_RADIUS = 10;
-        const ISS_ALT_SCALE = 1.05;
-        const MOON_ORBIT = 35;
-        const API_URL = 'https://api.wheretheiss.at/v1/satellites/25544';
-        const POLL_INTERVAL = 5000;
-        const MAX_TRAIL = 200;
+        // --- Config ---
+        const R_EARTH = 10;
+        const ISS_SCALE = 1.05;
+        const R_MOON_ORBIT = 35;
+        const API_ISS = 'https://api.wheretheiss.at/v1/satellites/25544';
+        const isMobile = window.innerWidth <= 768;
 
-        // ===== PERBAIKIAN: Daftar Bulan Hijriah dengan Nama Indonesia & Arab =====
+        // --- Islamic Months ---
         const MONTHS_HIJRI = [
-            { id: 'Muharram', ar: 'محرم' },
-            { id: 'Safar', ar: 'صفر' },
-            { id: 'Rabiul Awal', ar: 'ربيع الأول' },
-            { id: 'Rabiul Akhir', ar: 'ربيع الآخر' },
-            { id: 'Jumadil Awal', ar: 'جمادى الأولى' },
-            { id: 'Jumadil Akhir', ar: 'جمادى الآخرة' },
-            { id: 'Rajab', ar: 'رجب' },
-            { id: 'Sya\'ban', ar: 'شعبان' },
-            { id: 'Ramadan', ar: 'رمضان' },
-            { id: 'Syawal', ar: 'شوال' },
-            { id: 'Dzulqa\'dah', ar: 'ذو القعدة' },
-            { id: 'Dzulhijjah', ar: 'ذو الحجة' }
+            { id: 'Muharram', ar: 'محرم' }, { id: 'Safar', ar: 'صفر' }, { id: 'Rabiul Awal', ar: 'ربيع الأول' },
+            { id: 'Rabiul Akhir', ar: 'ربيع الآخر' }, { id: 'Jumadil Awal', ar: 'جمادى الأولى' }, { id: 'Jumadil Akhir', ar: 'جمادى الآخرة' },
+            { id: 'Rajab', ar: 'رجب' }, { id: 'Sya\'ban', ar: 'شعبان' }, { id: 'Ramadan', ar: 'رمضان' },
+            { id: 'Syawal', ar: 'شوال' }, { id: 'Dzulqa\'dah', ar: 'ذو القعدة' }, { id: 'Dzulhijjah', ar: 'ذو الحجة' }
         ];
 
-        // ─── State ───
-        let scene, camera, renderer, composer, controls, labelRenderer;
-        let earth, clouds, atmosphere;
-        let issGroup, issTarget = new THREE.Vector3();
-        let moonMesh;
-        let sunLight;
-        let trailGeo, trailLine, trailPos = [];
-        let countryLabels = [];
-        let raycaster, mouse;
-        let focusTarget = 'earth';
-        let isInit = false;
-        let clock = new THREE.Clock();
+        // --- Global Vars ---
+        let scene, camera, renderer, labelRenderer, controls;
+        let earth, clouds, moon, issGroup, sunLight, sunGlow;
+        let trailLine, trailPos = [];
+        let labels = [];
+        let issTarget = new THREE.Vector3();
+        let initialized = false;
 
-        // ─── Countries ───
+        // Reduced country list for performance
         const COUNTRIES = [
-            { name: "Indonesia", lat: -0.789, lon: 113.921 },
-            { name: "Jepang", lat: 36.204, lon: 138.252 },
-            { name: "Australia", lat: -25.274, lon: 133.775 },
-            { name: "Amerika Serikat", lat: 37.090, lon: -95.712 },
-            { name: "Brasil", lat: -14.235, lon: -51.925 },
-            { name: "Inggris", lat: 55.378, lon: -3.435 },
-            { name: "Afrika Selatan", lat: -30.559, lon: 22.937 },
-            { name: "Rusia", lat: 61.524, lon: 105.318 },
-            { name: "Cina", lat: 35.861, lon: 104.195 },
-            { name: "India", lat: 20.593, lon: 78.962 },
-            { name: "Arab Saudi", lat: 23.885, lon: 45.079 },
-            { name: "Mesir", lat: 26.820, lon: 30.802 },
-            { name: "Kanada", lat: 56.130, lon: -106.346 },
-            { name: "Argentina", lat: -38.416, lon: -63.616 },
-            { name: "Meksiko", lat: 23.634, lon: -102.552 },
-            { name: "Perancis", lat: 46.227, lon: 2.213 },
-            { name: "Jerman", lat: 51.165, lon: 10.451 },
-            { name: "Turki", lat: 38.963, lon: 35.243 },
-            { name: "Korea Selatan", lat: 35.907, lon: 127.766 },
-            { name: "Italia", lat: 41.871, lon: 12.567 },
-            { name: "Spanyol", lat: 40.463, lon: -3.749 },
-            { name: "Thailand", lat: 15.870, lon: 100.992 },
-            { name: "Singapura", lat: 1.352, lon: 103.819 },
-            { name: "Nigeria", lat: 9.081, lon: 8.675 },
-            { name: "Peru", lat: -9.189, lon: -75.015 },
-            { name: "Selandia Baru", lat: -40.900, lon: 174.885 },
-            { name: "Iran", lat: 32.427, lon: 53.688 },
-            { name: "Swiss", lat: 46.818, lon: 8.227 },
-            { name: "UEA", lat: 23.424, lon: 53.847 },
-            { name: "Belanda", lat: 52.132, lon: 5.291 }
+            { name: "Indonesia", lat: -0.789, lon: 113.921 }, { name: "Jepang", lat: 36.204, lon: 138.252 },
+            { name: "Australia", lat: -25.274, lon: 133.775 }, { name: "USA", lat: 37.090, lon: -95.712 },
+            { name: "Inggris", lat: 55.378, lon: -3.435 }, { name: "Rusia", lat: 61.524, lon: 105.318 },
+            { name: "Cina", lat: 35.861, lon: 104.195 }, { name: "India", lat: 20.593, lon: 78.962 },
+            { name: "Arab Saudi", lat: 23.885, lon: 45.079 }, { name: "Mesir", lat: 26.820, lon: 30.802 },
+            { name: "Brasil", lat: -14.235, lon: -51.925 }, { name: "Afsel", lat: -30.559, lon: 22.937 }
         ];
 
-        const TEX_BASE = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/';
-        const TEX = {
-            diffuse: TEX_BASE + 'earth_atmos_2048.jpg',
-            specular: TEX_BASE + 'earth_specular_2048.jpg',
-            normal: TEX_BASE + 'earth_normal_2048.jpg',
-            clouds: TEX_BASE + 'earth_clouds_1024.png',
-            moon: TEX_BASE + 'moon_1024.jpg'
-        };
+        // Texture Base
+        const TEX_URL = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/';
 
-        // ─── Format Masehi ───
-        const fmtMasehi = new Intl.DateTimeFormat('id-ID', {
-            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-        });
-
-        // ─── Helper: lat/lon → Vector3 ───
-        function latLonToVec3(lat, lon, radius) {
-            const phi = (90 - lat) * Math.PI / 180;
-            const theta = lon * Math.PI / 180;
+        // --- Math Helpers ---
+        const latLonToVec = (lat, lon, radius) => {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = lon * (Math.PI / 180);
             return new THREE.Vector3(
                 radius * Math.sin(phi) * Math.cos(theta),
                 radius * Math.cos(phi),
                 -radius * Math.sin(phi) * Math.sin(theta)
             );
-        }
+        };
 
-        // ─── Islamic Date (manual via Intl + mapping) ───
+        // Create a programmatic glow texture (Very lightweight compared to Bloom)
+        const createGlowTexture = (r, g, b, a) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grad.addColorStop(0, `rgba(${r},${g},${b},${a})`);
+            grad.addColorStop(0.3, `rgba(${r},${g},${b},${a * 0.5})`);
+            grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(canvas);
+        };
+
+        // --- Islamic Calendar Logic ---
         function getIslamicDate(now) {
             try {
-                const fmt = new Intl.DateTimeFormat('en', {
-                    calendar: 'islamic',
-                    day: 'numeric',
-                    month: 'numeric',
-                    year: 'numeric'
-                });
-                const parts = fmt.formatToParts(now);
+                const parts = new Intl.DateTimeFormat('en', { calendar: 'islamic', day: 'numeric', month: 'numeric', year: 'numeric' }).formatToParts(now);
                 let d, m, y;
-                for (const p of parts) {
-                    if (p.type === 'day') d = parseInt(p.value, 10);
-                    else if (p.type === 'month') m = parseInt(p.value, 10);
-                    else if (p.type === 'year') y = parseInt(p.value, 10);
-                }
-                if (m >= 1 && m <= 12 && d >= 1 && d <= 30 && y > 0) {
-                    return { day: d, month: MONTHS_HIJRI[m - 1], year: y };
-                }
-                return getIslamicDateManual(now);
-            } catch (_) {
-                return getIslamicDateManual(now);
-            }
+                parts.forEach(p => {
+                    if(p.type === 'day') d = parseInt(p.value);
+                    else if(p.type === 'month') m = parseInt(p.value);
+                    else if(p.type === 'year') y = parseInt(p.value);
+                });
+                if (m && d && y) return { day: d, month: MONTHS_HIJRI[m - 1], year: y };
+            } catch (e) {}
+            return { day: 1, month: MONTHS_HIJRI[0], year: 1445 }; // Fallback dummy
         }
 
-        // ─── Fallback: arithmetic Islamic calendar ───
-        function getIslamicDateManual(now) {
-            const ref = new Date('2023-07-19T00:00:00Z');
-            const msDay = 86400000;
-            let days = Math.floor((now.getTime() - ref.getTime()) / msDay);
-            if (days < 0) days = 0;
-
-            let year = 1445;
-            let remaining = days;
-            const CYCLE_DAYS = 10631;
-            const cycles = Math.floor(remaining / CYCLE_DAYS);
-            year += cycles * 30;
-            remaining -= cycles * CYCLE_DAYS;
-
-            const monthLengths = [];
-            for (let i = 0; i < 30; i++) {
-                const isLeap = (i * 11 + 14) % 30 < 11;
-                const mLen = [];
-                for (let j = 0; j < 12; j++) {
-                    const daysInMonth = (j === 11) ? (isLeap ? 30 : 29) : (j % 2 === 0 ? 30 : 29);
-                    mLen.push(daysInMonth);
-                }
-                monthLengths.push(mLen);
-            }
-
-            let month = 0;
-            let day = 1;
-            for (let i = 0; i < 30; i++) {
-                const mLen = monthLengths[i];
-                for (let j = 0; j < 12; j++) {
-                    if (remaining < mLen[j]) {
-                        month = j;
-                        day = remaining + 1;
-                        break;
-                    }
-                    remaining -= mLen[j];
-                }
-                if (month !== undefined) break;
-            }
-            if (month === undefined) { month = 0;
-                day = 1; }
-
-            return { day, month: MONTHS_HIJRI[month], year };
+        function updateUI() {
+            const now = new Date();
+            uiTime.innerText = now.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+            
+            // Format Masehi
+            uiDateMasehi.innerText = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
+            
+            // Format Hijriah
+            const hijri = getIslamicDate(now);
+            uiDateHijriah.innerText = `${hijri.day} ${hijri.month.id} (${hijri.month.ar}) ${hijri.year} H`;
         }
 
-        // ─── Init ───
+        // --- Initialize 3D ---
         function init() {
-            const container = document.getElementById('canvas-container');
+            const container = el('canvas-container');
+            const w = window.innerWidth, h = window.innerHeight;
 
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x020205);
+            camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+            camera.position.set(0, 10, 35);
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 15, 45);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            // Fast Renderer settings
+            renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
+            renderer.setSize(w, h);
+            // Limit pixel ratio on mobile to save battery and increase FPS
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.2;
+            renderer.toneMappingExposure = 1.1;
             container.appendChild(renderer.domElement);
 
             labelRenderer = new CSS2DRenderer();
-            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(w, h);
             labelRenderer.domElement.style.position = 'absolute';
             labelRenderer.domElement.style.top = '0';
             labelRenderer.domElement.style.pointerEvents = 'none';
@@ -873,387 +501,270 @@
 
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.06;
-            controls.minDistance = 4;
-            controls.maxDistance = 150;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = R_EARTH + 1.5;
+            controls.maxDistance = 100;
             controls.enablePan = false;
-            controls.target.set(0, 0, 0);
 
-            raycaster = new THREE.Raycaster();
-            mouse = new THREE.Vector2();
-
-            const rPass = new RenderPass(scene, camera);
-            const bloom = new UnrealBloomPass(
-                new THREE.Vector2(window.innerWidth, window.innerHeight),
-                2.5, 1.0, 0.95
-            );
-            composer = new EffectComposer(renderer);
-            composer.addPass(rPass);
-            composer.addPass(bloom);
-
-            loadResources();
-
-            window.addEventListener('resize', onResize);
-            window.addEventListener('pointerdown', onPointerDown);
+            loadAssets();
+            window.addEventListener('resize', onWindowResize);
+            setInterval(updateUI, 1000);
+            updateUI();
         }
 
-        // ─── Load textures ───
-        function loadResources() {
+        function loadAssets() {
             const manager = new THREE.LoadingManager();
-            const loaderTex = new THREE.TextureLoader(manager);
-            const tex = {};
+            const texLoader = new THREE.TextureLoader(manager);
+            const textures = {};
 
             manager.onProgress = (_, loaded, total) => {
-                loadingStatus.innerText = `MEMUAT ASET (${loaded}/${total})`;
+                loadingStatus.innerText = `MEMUAT TEKSTUR (${Math.round((loaded/total)*100)}%)`;
             };
-            manager.onLoad = () => {
-                loadingStatus.innerText = 'MEMBANGUN KONEKSI…';
-                buildScene(tex);
-                fetchISSData().then(() => {
-                    setTimeout(() => {
-                        loader.style.opacity = '0';
-                        setTimeout(() => loader.style.display = 'none', 1000);
-                        isInit = true;
-                        setInterval(fetchISSData, POLL_INTERVAL);
-                        animate();
-                    }, 500);
-                });
-            };
-            manager.onError = (url) => console.warn('Texture error:', url);
 
-            tex.diffuse = loaderTex.load(TEX.diffuse);
-            tex.specular = loaderTex.load(TEX.specular);
-            tex.normal = loaderTex.load(TEX.normal);
-            tex.clouds = loaderTex.load(TEX.clouds);
-            tex.moon = loaderTex.load(TEX.moon);
+            manager.onLoad = () => {
+                loadingStatus.innerText = 'MEMULAI SISTEM...';
+                buildUniverse(textures);
+                
+                // Fetch ISS Data
+                fetchISS();
+                setInterval(fetchISS, 5000);
+
+                setTimeout(() => {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.display = 'none', 600);
+                    initialized = true;
+                    animate();
+                }, 500);
+            };
+
+            textures.earth = texLoader.load(TEX_URL + 'earth_atmos_2048.jpg');
+            textures.bump = texLoader.load(TEX_URL + 'earth_specular_2048.jpg'); // Using specular as rough bump
+            textures.clouds = texLoader.load(TEX_URL + 'earth_clouds_1024.png');
+            textures.moon = texLoader.load(TEX_URL + 'moon_1024.jpg');
         }
 
-        // ─── Build Scene ───
-        function buildScene(tex) {
-            scene.add(new THREE.AmbientLight(0x111122, 0.2));
+        function buildUniverse(tex) {
+            scene.add(new THREE.AmbientLight(0x222233, 0.4));
 
+            // Directional Light (Sun)
             sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
             scene.add(sunLight);
 
-            createStars();
+            // Fake Sun Glow (Cheaper than bloom)
+            const sunGlowTex = createGlowTexture(255, 240, 220, 1);
+            const sunMat = new THREE.SpriteMaterial({ map: sunGlowTex, blending: THREE.AdditiveBlending, depthWrite: false });
+            sunGlow = new THREE.Sprite(sunMat);
+            sunGlow.scale.set(60, 60, 1);
+            scene.add(sunGlow);
 
-            // Bumi
+            // Earth
             const earthMat = new THREE.MeshStandardMaterial({
-                map: tex.diffuse,
-                normalMap: tex.normal,
-                roughnessMap: tex.specular,
-                metalness: 0.1,
-                roughness: 0.8
+                map: tex.earth,
+                roughnessMap: tex.bump,
+                roughness: 0.7,
+                metalness: 0.1
             });
-            earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS, 64, 64), earthMat);
+            earth = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH, 48, 48), earthMat);
             scene.add(earth);
 
-            // Awan
+            // Clouds
             const cloudMat = new THREE.MeshStandardMaterial({
-                map: tex.clouds,
-                transparent: true,
-                opacity: 0.55,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
+                map: tex.clouds, transparent: true, opacity: 0.6,
+                blending: THREE.AdditiveBlending, depthWrite: false
             });
-            clouds = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS + 0.1, 64, 64), cloudMat);
+            clouds = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 0.15, 48, 48), cloudMat);
             earth.add(clouds);
 
-            // Atmosfer
-            const atmosMat = new THREE.ShaderMaterial({
-                vertexShader: `
-                    varying vec3 vN;
-                    void main() {
-                        vN = normalize(normalMatrix * normal);
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    varying vec3 vN;
-                    void main() {
-                        float i = pow(0.6 - dot(vN, vec3(0.0,0.0,1.0)), 4.0);
-                        gl_FragColor = vec4(0.3,0.6,1.0,1.0) * i * 1.5;
-                    }
-                `,
-                blending: THREE.AdditiveBlending,
-                side: THREE.BackSide,
-                transparent: true,
-                depthWrite: false
+            // Simple Atmosphere (Edge Glow)
+            const atmosMat = new THREE.MeshBasicMaterial({
+                color: 0x00aaff, transparent: true, opacity: 0.15,
+                blending: THREE.AdditiveBlending, side: THREE.BackSide
             });
-            atmosphere = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS + 0.3, 64, 64), atmosMat);
-            scene.add(atmosphere);
+            const atmosphere = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 0.4, 32, 32), atmosMat);
+            earth.add(atmosphere);
 
-            // Bulan
-            const moonMat = new THREE.MeshStandardMaterial({
-                map: tex.moon,
-                roughness: 1.0,
-                metalness: 0.0
-            });
-            moonMesh = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS * 0.27, 32, 32), moonMat);
-            scene.add(moonMesh);
+            // Moon
+            moon = new THREE.Mesh(
+                new THREE.SphereGeometry(R_EARTH * 0.27, 32, 32),
+                new THREE.MeshStandardMaterial({ map: tex.moon, roughness: 1, metalness: 0 })
+            );
+            scene.add(moon);
 
-            // Label negara
-            createCountryLabels();
+            // Stars (Reduced count for mobile)
+            createStars(isMobile ? 1000 : 2000);
+
+            // Labels
+            createLabels();
 
             // ISS
             createISS();
 
             // Trail
-            trailGeo = new THREE.BufferGeometry();
-            const trailMat = new THREE.LineBasicMaterial({
-                color: 0x00f0ff,
-                transparent: true,
-                opacity: 0.5,
-                blending: THREE.AdditiveBlending
-            });
-            trailLine = new THREE.Line(trailGeo, trailMat);
+            const trailMat = new THREE.LineBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.5 });
+            trailLine = new THREE.Line(new THREE.BufferGeometry(), trailMat);
             scene.add(trailLine);
-
-            // Update kalender awal
-            updateCalendars();
-            setInterval(updateCalendars, 1000);
         }
 
-        function createStars() {
-            const g = new THREE.BufferGeometry();
-            const v = [];
-            for (let i = 0; i < 3000; i++) {
-                const x = THREE.MathUtils.randFloatSpread(400);
-                const y = THREE.MathUtils.randFloatSpread(400);
-                const z = THREE.MathUtils.randFloatSpread(400);
-                if (Math.sqrt(x * x + y * y + z * z) > EARTH_RADIUS + 50) v.push(x, y, z);
+        function createStars(count) {
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            for(let i=0; i<count*3; i+=3) {
+                const r = R_EARTH + 50 + Math.random() * 150;
+                const theta = 2 * Math.PI * Math.random();
+                const phi = Math.acos(2 * Math.random() - 1);
+                pos[i] = r * Math.sin(phi) * Math.cos(theta);
+                pos[i+1] = r * Math.sin(phi) * Math.sin(theta);
+                pos[i+2] = r * Math.cos(phi);
             }
-            g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
-            scene.add(new THREE.Points(g, new THREE.PointsMaterial({
-                color: 0xffffff,
-                size: 0.1,
-                transparent: true,
-                opacity: 0.8,
-                sizeAttenuation: true
-            })));
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, transparent: true, opacity: 0.7 });
+            scene.add(new THREE.Points(geo, mat));
         }
 
-        function createISS() {
-            issGroup = new THREE.Group();
-            const core = new THREE.Mesh(
-                new THREE.SphereGeometry(0.15, 16, 16),
-                new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00ffff, emissiveIntensity: 5.0 })
-            );
-            const shell = new THREE.Mesh(
-                new THREE.IcosahedronGeometry(0.3, 1),
-                new THREE.MeshPhysicalMaterial({
-                    color: 0xffffff,
-                    transmission: 0.9,
-                    opacity: 1,
-                    metalness: 0,
-                    roughness: 0.1,
-                    ior: 1.5,
-                    thickness: 0.5,
-                    transparent: true
-                })
-            );
-            const pGeo = new THREE.BoxGeometry(0.8, 0.02, 0.2);
-            const pMat = new THREE.MeshStandardMaterial({ color: 0x051020, metalness: 0.8, roughness: 0.2 });
-            const p1 = new THREE.Mesh(pGeo, pMat);
-            p1.position.x = 0.5;
-            const p2 = new THREE.Mesh(pGeo, pMat);
-            p2.position.x = -0.5;
-
-            issGroup.add(core, shell, p1, p2);
-            scene.add(issGroup);
-        }
-
-        function createCountryLabels() {
+        function createLabels() {
             COUNTRIES.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'country-label';
                 div.textContent = c.name;
                 const label = new CSS2DObject(div);
-                const pos = latLonToVec3(c.lat, c.lon, EARTH_RADIUS + 0.15);
+                const pos = latLonToVec(c.lat, c.lon, R_EARTH + 0.2);
                 label.position.copy(pos);
                 earth.add(label);
-                countryLabels.push({ label, pos, div });
+                labels.push({ obj: label, pos: pos, el: div });
             });
         }
 
-        // ─── Update Kalender ───
-        function updateCalendars() {
-            const now = new Date();
-            uiDateMasehi.innerText = fmtMasehi.format(now);
-
-            const hijri = getIslamicDate(now);
-            const month = hijri.month;
-            // Tampilkan: hari, nama Indonesia (arab), tahun H
-            uiDateHijriah.innerText = `${hijri.day} ${month.id} (${month.ar}) ${hijri.year} H`;
+        function createISS() {
+            issGroup = new THREE.Group();
+            
+            // Core
+            const core = new THREE.Mesh(
+                new THREE.BoxGeometry(0.3, 0.1, 0.1),
+                new THREE.MeshStandardMaterial({ color: 0xffffff })
+            );
+            
+            // Solar Panels
+            const panelMat = new THREE.MeshStandardMaterial({ color: 0x112244, metalness: 0.8, roughness: 0.2 });
+            const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.3), panelMat); p1.position.x = 0.6;
+            const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.3), panelMat); p2.position.x = -0.6;
+            
+            // Fake Glow (Bloom Alternative)
+            const glowTex = createGlowTexture(0, 229, 255, 1);
+            const glowMat = new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false });
+            const issGlow = new THREE.Sprite(glowMat);
+            issGlow.scale.set(1.5, 1.5, 1);
+            
+            issGroup.add(core, p1, p2, issGlow);
+            scene.add(issGroup);
         }
 
-        // ─── Update Astro ───
-        function updateAstro() {
-            const now = new Date();
-            uiTime.innerText = now.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+        async function fetchISS() {
+            try {
+                const res = await fetch(API_ISS);
+                const d = await res.json();
+                
+                uiLat.innerText = `${d.latitude.toFixed(4)}°`;
+                uiLon.innerText = `${d.longitude.toFixed(4)}°`;
+                uiVel.innerHTML = `${Math.round(d.velocity).toLocaleString()} <span class="data-unit">km/h</span>`;
+                uiAlt.innerHTML = `${Math.round(d.altitude).toLocaleString()} <span class="data-unit">km</span>`;
 
+                issTarget.copy(latLonToVec(d.latitude, d.longitude, R_EARTH * ISS_SCALE));
+                
+                if (trailPos.length === 0) issGroup.position.copy(issTarget);
+                
+                trailPos.push(issTarget.clone());
+                if (trailPos.length > 100) trailPos.shift(); // Max trail length
+                
+                const arr = new Float32Array(trailPos.length * 3);
+                for(let i=0; i<trailPos.length; i++){
+                    arr[i*3] = trailPos[i].x; arr[i*3+1] = trailPos[i].y; arr[i*3+2] = trailPos[i].z;
+                }
+                trailLine.geometry.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+                
+            } catch (e) { console.warn("ISS API Error"); }
+        }
+
+        function updateAstronomy() {
+            const now = new Date();
             const oneDay = 86400000;
+            
+            // Simple Sun Position Calc
             const start = new Date(now.getUTCFullYear(), 0, 0);
             const doy = Math.floor((now - start) / oneDay);
             const sunDecl = -23.44 * Math.cos((360 / 365.24) * (doy + 10) * Math.PI / 180);
-            const utcH = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+            const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
             let sunLon = 180 - utcH * 15;
-            if (sunLon < -180) sunLon += 360;
+            
+            const sunPos = latLonToVec(sunDecl, sunLon, 250);
+            sunLight.position.copy(sunPos);
+            sunGlow.position.copy(sunPos);
 
-            if (sunLight) {
-                const sunPos = latLonToVec3(sunDecl, sunLon, 200);
-                sunLight.position.copy(sunPos);
-            }
-
-            // Bulan
-            const KNOWN_NEW = new Date('2024-01-11T11:57:00Z').getTime();
-            const LUNAR_CYCLE = 29.530588853;
-            let ageMs = now.getTime() - KNOWN_NEW;
-            let ageDays = (ageMs / oneDay) % LUNAR_CYCLE;
+            // Simple Moon Calc
+            const KNOWN_NEW = 1704974220000; // Jan 11 2024
+            const LUNAR_CYCLE = 29.530588;
+            let ageDays = ((now.getTime() - KNOWN_NEW) / oneDay) % LUNAR_CYCLE;
             if (ageDays < 0) ageDays += LUNAR_CYCLE;
-
+            
             const elong = (ageDays / LUNAR_CYCLE) * 360;
             let moonLon = sunLon - elong;
-            if (moonLon < -180) moonLon += 360;
-            if (moonLon > 180) moonLon -= 360;
             const moonDecl = sunDecl + 5.14 * Math.sin((ageDays / LUNAR_CYCLE) * Math.PI * 2);
+            
             const phase = 0.5 * (1 - Math.cos(elong * Math.PI / 180)) * 100;
+            moon.position.copy(latLonToVec(moonDecl, moonLon, R_MOON_ORBIT));
+            moon.lookAt(0,0,0);
 
-            if (moonMesh) {
-                const pos = latLonToVec3(moonDecl, moonLon, MOON_ORBIT);
-                moonMesh.position.copy(pos);
-                moonMesh.lookAt(new THREE.Vector3(0, 0, 0));
-            }
+            // Update DOM
+            uiMoonAge.innerHTML = `${ageDays.toFixed(1)} <span class="data-unit">Hr</span>`;
+            uiMoonPhase.innerHTML = `${phase.toFixed(1)} <span class="data-unit">%</span>`;
+            uiMoonEl.innerHTML = `${elong.toFixed(1)}°`;
 
-            uiMoonAge.innerHTML = `${ageDays.toFixed(1)}<span class="metric-unit"> Hr</span>`;
-            uiMoonPhase.innerHTML = `${phase.toFixed(2)}<span class="metric-unit">%</span>`;
-            uiMoonEl.innerHTML = `${elong.toFixed(1)}<span class="metric-unit">°</span>`;
-
-            let status = 'Bukan Fase Hilal',
-                color = 'rgba(224,247,250,0.6)';
-            if (ageDays < 2.5 && ageDays > 0) {
+            // Hilal Logic
+            let status = 'Bukan Fase Hilal', bg = 'rgba(255,255,255,0.1)', col = '#fff';
+            if (ageDays > 0 && ageDays < 2.5) {
                 if (elong >= 6.4) {
-                    status = 'Terlihat (Kriteria MABIMS)';
-                    color = '#00ff88';
+                    status = 'Terlihat (Kriteria MABIMS)'; bg = 'rgba(0, 255, 136, 0.2)'; col = '#00ff88';
                 } else {
-                    status = 'Belum Terlihat (< Kriteria)';
-                    color = '#ffaa00';
+                    status = 'Belum Terlihat (Elongasi Rendah)'; bg = 'rgba(255, 179, 0, 0.2)'; col = '#ffb300';
                 }
             } else if (ageDays > 27) {
-                status = 'Fase Bulan Tua (Waning)';
+                status = 'Fase Bulan Tua'; bg = 'rgba(150, 150, 150, 0.2)'; col = '#aaa';
             }
             uiHilalStatus.innerText = status;
-            uiHilalStatus.style.color = color;
+            uiHilalStatus.style.background = bg;
+            uiHilalStatus.style.color = col;
         }
 
-        // ─── Fetch ISS ───
-        async function fetchISSData() {
-            try {
-                const r = await fetch(API_URL);
-                if (!r.ok) throw new Error('Network error');
-                const d = await r.json();
-
-                uiLat.innerHTML = `${d.latitude.toFixed(4)}<span class="metric-unit">°</span>`;
-                uiLon.innerHTML = `${d.longitude.toFixed(4)}<span class="metric-unit">°</span>`;
-                uiVel.innerHTML = `${Math.round(d.velocity).toLocaleString()}<span class="metric-unit">km/h</span>`;
-                uiAlt.innerHTML = `${Math.round(d.altitude).toLocaleString()}<span class="metric-unit">km</span>`;
-
-                const rOrbit = EARTH_RADIUS * ISS_ALT_SCALE;
-                issTarget.copy(latLonToVec3(d.latitude, d.longitude, rOrbit));
-
-                if (trailPos.length === 0) issGroup.position.copy(issTarget);
-                updateTrail(issTarget.clone());
-            } catch (e) {
-                console.warn('ISS fetch error:', e);
-            }
-        }
-
-        function updateTrail(pos) {
-            trailPos.push(pos);
-            if (trailPos.length > MAX_TRAIL) trailPos.shift();
-            const arr = new Float32Array(trailPos.length * 3);
-            for (let i = 0; i < trailPos.length; i++) {
-                arr[i * 3] = trailPos[i].x;
-                arr[i * 3 + 1] = trailPos[i].y;
-                arr[i * 3 + 2] = trailPos[i].z;
-            }
-            trailGeo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
-            trailGeo.attributes.position.needsUpdate = true;
-        }
-
-        // ─── Click / Tap ───
-        function onPointerDown(e) {
-            if (e.target.closest('.glass-panel')) return;
-            const rect = renderer.domElement.getBoundingClientRect();
-            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const targets = [];
-            if (earth) targets.push(earth);
-            if (clouds) targets.push(clouds);
-            if (atmosphere) targets.push(atmosphere);
-            if (moonMesh) targets.push(moonMesh);
-
-            const hits = raycaster.intersectObjects(targets);
-            if (hits.length) {
-                focusTarget = (hits[0].object === moonMesh) ? 'moon' : 'earth';
-            } else {
-                focusTarget = 'earth';
-            }
-        }
-
-        // ─── Resize ───
-        function onResize() {
-            const w = window.innerWidth,
-                h = window.innerHeight;
-            camera.aspect = w / h;
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(w, h);
-            labelRenderer.setSize(w, h);
-            composer.setSize(w, h);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // ─── Animate ───
         function animate() {
             requestAnimationFrame(animate);
-            if (!isInit) return;
+            if (!initialized) return;
 
-            if (issGroup && issTarget) {
-                issGroup.position.lerp(issTarget, 0.06);
-                issGroup.lookAt(new THREE.Vector3(0, 0, 0));
-                if (issGroup.children[1]) {
-                    issGroup.children[1].rotation.x += 0.01;
-                    issGroup.children[1].rotation.y += 0.015;
-                }
+            // Rotate Clouds
+            if(clouds) clouds.rotation.y += 0.0004;
+
+            // Move ISS Smoothly
+            if(issGroup) {
+                issGroup.position.lerp(issTarget, 0.05);
+                issGroup.lookAt(0,0,0);
             }
 
-            if (clouds) clouds.rotation.y += 0.0003;
+            updateAstronomy();
 
-            updateAstro();
-
-            let t = new THREE.Vector3(0, 0, 0);
-            if (focusTarget === 'moon' && moonMesh) {
-                t.copy(moonMesh.position);
-                controls.minDistance = 4;
-            } else {
-                controls.minDistance = EARTH_RADIUS + 1.5;
-                if (camera.position.length() < EARTH_RADIUS + 1.5) {
-                    camera.position.setLength(EARTH_RADIUS + 1.5);
-                }
-            }
-            controls.target.lerp(t, 0.08);
-
-            const camLocal = new THREE.Vector3();
-            camLocal.copy(camera.position);
-            earth.worldToLocal(camLocal);
-            countryLabels.forEach(data => {
-                const dot = camLocal.clone().normalize().dot(data.pos.clone().normalize());
-                data.div.style.opacity = (dot > 0.2) ? '1' : '0';
+            // Label Visibility based on Earth curvature
+            const camLocal = camera.position.clone();
+            labels.forEach(l => {
+                const dot = camLocal.clone().normalize().dot(l.pos.clone().normalize());
+                l.el.style.opacity = dot > 0.25 ? '1' : '0';
             });
 
             controls.update();
-            composer.render();
+            renderer.render(scene, camera);
             labelRenderer.render(scene, camera);
         }
 
