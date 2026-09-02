@@ -207,13 +207,29 @@
             transition: opacity 0.6s ease;
         }
         
+        .loader-content {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
         .ring {
-            width: 40px; height: 40px;
+            width: 76px; height: 76px;
             border: 3px solid rgba(0, 229, 255, 0.1);
             border-top: 3px solid var(--cyan);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 16px;
+        }
+
+        .progress-text {
+            position: absolute;
+            font-family: var(--font-mono);
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
         }
 
         .loader-text {
@@ -280,7 +296,7 @@
         }
     </style>
 
-    <!-- Import Map Three.js (No PostProcessing needed now) -->
+    <!-- Import Map Three.js -->
     <script type="importmap">
         {
             "imports": {
@@ -294,8 +310,11 @@
 
     <!-- Loader -->
     <div id="loader">
-        <div class="ring"></div>
-        <div class="loader-text" id="loading-status">INISIALISASI 3D...</div>
+        <div class="loader-content">
+            <div class="ring"></div>
+            <div class="progress-text" id="loading-percent">0%</div>
+        </div>
+        <div class="loader-text" id="loading-status">MEMUAT ASET 3D...</div>
     </div>
 
     <!-- UI Layer -->
@@ -304,7 +323,7 @@
         <!-- Header -->
         <div class="header-section">
             <div class="title-box">
-                <h1>No Hilal ✌️</h1>
+                <h1>Pantau Hilal gak ? 🤞</h1>
                 <p id="ui-time">--:--:-- UTC</p>
             </div>
         </div>
@@ -384,7 +403,7 @@
         const uiTime = el('ui-time'), uiLat = el('ui-lat'), uiLon = el('ui-lon'), uiVel = el('ui-vel'), uiAlt = el('ui-alt');
         const uiDateMasehi = el('ui-date-masehi'), uiDateHijriah = el('ui-date-hijriah');
         const uiMoonAge = el('ui-moon-age'), uiMoonPhase = el('ui-moon-phase'), uiMoonEl = el('ui-moon-el'), uiHilalStatus = el('ui-hilal-status');
-        const loader = el('loader'), loadingStatus = el('loading-status');
+        const loader = el('loader'), loadingStatus = el('loading-status'), loadingPercent = el('loading-percent');
 
         // --- Config ---
         const R_EARTH = 10;
@@ -433,7 +452,6 @@
             );
         };
 
-        // Create a programmatic glow texture (Very lightweight compared to Bloom)
         const createGlowTexture = (r, g, b, a) => {
             const canvas = document.createElement('canvas');
             canvas.width = 64; canvas.height = 64;
@@ -486,7 +504,6 @@
             // Fast Renderer settings
             renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
             renderer.setSize(w, h);
-            // Limit pixel ratio on mobile to save battery and increase FPS
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.1;
@@ -517,28 +534,53 @@
             const texLoader = new THREE.TextureLoader(manager);
             const textures = {};
 
+            let targetProgress = 0;
+            let currentProgress = 0;
+
             manager.onProgress = (_, loaded, total) => {
-                loadingStatus.innerText = `MEMUAT TEKSTUR (${Math.round((loaded/total)*100)}%)`;
+                targetProgress = (loaded / total) * 100;
             };
 
             manager.onLoad = () => {
-                loadingStatus.innerText = 'MEMULAI SISTEM...';
-                buildUniverse(textures);
-                
-                // Fetch ISS Data
-                fetchISS();
-                setInterval(fetchISS, 5000);
-
-                setTimeout(() => {
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.style.display = 'none', 600);
-                    initialized = true;
-                    animate();
-                }, 500);
+                targetProgress = 100;
             };
 
+            // Animasi Loading Persentase (Mulus/Smooth Easing)
+            const loaderInterval = setInterval(() => {
+                // Pergerakan angka perlahan menuju target sebenarnya
+                currentProgress += (targetProgress - currentProgress) * 0.1;
+                
+                // Jika unduhan tersendat/nunggu koneksi, kita majukan pelan-pelan (mentok 95%)
+                if (targetProgress < 100 && (targetProgress - currentProgress) < 1) {
+                    targetProgress += 0.4;
+                    if (targetProgress > 95) targetProgress = 95;
+                }
+
+                // Bulatkan penuh saat mendekati 100
+                if (currentProgress > 99.5) currentProgress = 100;
+
+                loadingPercent.innerText = Math.floor(currentProgress) + '%';
+
+                // Setelah menyentuh angka 100%
+                if (currentProgress === 100) {
+                    clearInterval(loaderInterval);
+                    loadingStatus.innerText = 'MEMULAI SISTEM...';
+                    
+                    buildUniverse(textures);
+                    fetchISS();
+                    setInterval(fetchISS, 5000);
+
+                    setTimeout(() => {
+                        loader.style.opacity = '0';
+                        setTimeout(() => loader.style.display = 'none', 600);
+                        initialized = true;
+                        animate();
+                    }, 500);
+                }
+            }, 25); // refresh rate persentase
+
             textures.earth = texLoader.load(TEX_URL + 'earth_atmos_2048.jpg');
-            textures.bump = texLoader.load(TEX_URL + 'earth_specular_2048.jpg'); // Using specular as rough bump
+            textures.bump = texLoader.load(TEX_URL + 'earth_specular_2048.jpg');
             textures.clouds = texLoader.load(TEX_URL + 'earth_clouds_1024.png');
             textures.moon = texLoader.load(TEX_URL + 'moon_1024.jpg');
         }
@@ -546,18 +588,15 @@
         function buildUniverse(tex) {
             scene.add(new THREE.AmbientLight(0x222233, 0.4));
 
-            // Directional Light (Sun)
             sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
             scene.add(sunLight);
 
-            // Fake Sun Glow (Cheaper than bloom)
             const sunGlowTex = createGlowTexture(255, 240, 220, 1);
             const sunMat = new THREE.SpriteMaterial({ map: sunGlowTex, blending: THREE.AdditiveBlending, depthWrite: false });
             sunGlow = new THREE.Sprite(sunMat);
             sunGlow.scale.set(60, 60, 1);
             scene.add(sunGlow);
 
-            // Earth
             const earthMat = new THREE.MeshStandardMaterial({
                 map: tex.earth,
                 roughnessMap: tex.bump,
@@ -567,7 +606,6 @@
             earth = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH, 48, 48), earthMat);
             scene.add(earth);
 
-            // Clouds
             const cloudMat = new THREE.MeshStandardMaterial({
                 map: tex.clouds, transparent: true, opacity: 0.6,
                 blending: THREE.AdditiveBlending, depthWrite: false
@@ -575,7 +613,6 @@
             clouds = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 0.15, 48, 48), cloudMat);
             earth.add(clouds);
 
-            // Simple Atmosphere (Edge Glow)
             const atmosMat = new THREE.MeshBasicMaterial({
                 color: 0x00aaff, transparent: true, opacity: 0.15,
                 blending: THREE.AdditiveBlending, side: THREE.BackSide
@@ -583,23 +620,16 @@
             const atmosphere = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 0.4, 32, 32), atmosMat);
             earth.add(atmosphere);
 
-            // Moon
             moon = new THREE.Mesh(
                 new THREE.SphereGeometry(R_EARTH * 0.27, 32, 32),
                 new THREE.MeshStandardMaterial({ map: tex.moon, roughness: 1, metalness: 0 })
             );
             scene.add(moon);
 
-            // Stars (Reduced count for mobile)
             createStars(isMobile ? 1000 : 2000);
-
-            // Labels
             createLabels();
-
-            // ISS
             createISS();
 
-            // Trail
             const trailMat = new THREE.LineBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.5 });
             trailLine = new THREE.Line(new THREE.BufferGeometry(), trailMat);
             scene.add(trailLine);
@@ -637,18 +667,15 @@
         function createISS() {
             issGroup = new THREE.Group();
             
-            // Core
             const core = new THREE.Mesh(
                 new THREE.BoxGeometry(0.3, 0.1, 0.1),
                 new THREE.MeshStandardMaterial({ color: 0xffffff })
             );
             
-            // Solar Panels
             const panelMat = new THREE.MeshStandardMaterial({ color: 0x112244, metalness: 0.8, roughness: 0.2 });
             const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.3), panelMat); p1.position.x = 0.6;
             const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.3), panelMat); p2.position.x = -0.6;
             
-            // Fake Glow (Bloom Alternative)
             const glowTex = createGlowTexture(0, 229, 255, 1);
             const glowMat = new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false });
             const issGlow = new THREE.Sprite(glowMat);
@@ -673,7 +700,7 @@
                 if (trailPos.length === 0) issGroup.position.copy(issTarget);
                 
                 trailPos.push(issTarget.clone());
-                if (trailPos.length > 100) trailPos.shift(); // Max trail length
+                if (trailPos.length > 100) trailPos.shift();
                 
                 const arr = new Float32Array(trailPos.length * 3);
                 for(let i=0; i<trailPos.length; i++){
@@ -688,7 +715,6 @@
             const now = new Date();
             const oneDay = 86400000;
             
-            // Simple Sun Position Calc
             const start = new Date(now.getUTCFullYear(), 0, 0);
             const doy = Math.floor((now - start) / oneDay);
             const sunDecl = -23.44 * Math.cos((360 / 365.24) * (doy + 10) * Math.PI / 180);
@@ -699,8 +725,7 @@
             sunLight.position.copy(sunPos);
             sunGlow.position.copy(sunPos);
 
-            // Simple Moon Calc
-            const KNOWN_NEW = 1704974220000; // Jan 11 2024
+            const KNOWN_NEW = 1704974220000;
             const LUNAR_CYCLE = 29.530588;
             let ageDays = ((now.getTime() - KNOWN_NEW) / oneDay) % LUNAR_CYCLE;
             if (ageDays < 0) ageDays += LUNAR_CYCLE;
@@ -713,12 +738,10 @@
             moon.position.copy(latLonToVec(moonDecl, moonLon, R_MOON_ORBIT));
             moon.lookAt(0,0,0);
 
-            // Update DOM
             uiMoonAge.innerHTML = `${ageDays.toFixed(1)} <span class="data-unit">Hr</span>`;
             uiMoonPhase.innerHTML = `${phase.toFixed(1)} <span class="data-unit">%</span>`;
             uiMoonEl.innerHTML = `${elong.toFixed(1)}°`;
 
-            // Hilal Logic
             let status = 'Bukan Fase Hilal', bg = 'rgba(255,255,255,0.1)', col = '#fff';
             if (ageDays > 0 && ageDays < 2.5) {
                 if (elong >= 6.4) {
@@ -745,10 +768,8 @@
             requestAnimationFrame(animate);
             if (!initialized) return;
 
-            // Rotate Clouds
             if(clouds) clouds.rotation.y += 0.0004;
 
-            // Move ISS Smoothly
             if(issGroup) {
                 issGroup.position.lerp(issTarget, 0.05);
                 issGroup.lookAt(0,0,0);
@@ -756,7 +777,6 @@
 
             updateAstronomy();
 
-            // Label Visibility based on Earth curvature
             const camLocal = camera.position.clone();
             labels.forEach(l => {
                 const dot = camLocal.clone().normalize().dot(l.pos.clone().normalize());
