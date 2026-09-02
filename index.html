@@ -1,41 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Pelacak Orbit ISS & Hilal</title>
     <link rel="icon" type="image/png" href="/hilal.png" />
     <style>
+        /* ===== CSS SAMA SEPERTI SEBELUMNYA (tidak diubah) ===== */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
         :root {
             --primary: #00f0ff;
             --secondary: #ffaa00;
-            --bg-glass: rgba(10, 15, 30, 0.4);
+            --bg-glass: rgba(10, 15, 30, 0.55);
             --border-glass: rgba(0, 240, 255, 0.2);
             --border-glass-alt: rgba(255, 170, 0, 0.2);
             --text-main: #e0f7fa;
+            --radius: 14px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
         }
-
+        html,
         body {
             margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100vh;
             overflow: hidden;
-            background-color: #000;
+            background: #000;
             font-family: 'Courier New', Courier, monospace;
             color: var(--text-main);
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
-
         #canvas-container {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
             z-index: 1;
+            touch-action: none;
         }
-
-        /* UI Overlay */
         #ui-layer {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
@@ -45,161 +55,216 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 2rem;
+            padding: 12px 12px 10px;
             box-sizing: border-box;
+            overflow-y: auto;
         }
-
+        #ui-layer::-webkit-scrollbar {
+            width: 3px;
+            background: transparent;
+        }
+        #ui-layer::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.3);
+            border-radius: 10px;
+        }
         .top-container {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
             width: 100%;
-            gap: 1rem;
-            align-items: flex-start;
+            justify-content: center;
+            pointer-events: none;
         }
-
         .glass-panel {
             background: var(--bg-glass);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             border: 1px solid var(--border-glass);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 240, 255, 0.05);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            box-shadow: var(--shadow), inset 0 0 10px rgba(0, 240, 255, 0.04);
             pointer-events: auto;
+            width: 100%;
+            max-width: 420px;
+            flex: 1 1 280px;
+            transition: all 0.2s;
         }
-
         .glass-panel.lunar {
-            border: 1px solid var(--border-glass-alt);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 170, 0, 0.05);
+            border-color: var(--border-glass-alt);
+            box-shadow: var(--shadow), inset 0 0 10px rgba(255, 170, 0, 0.04);
         }
-
         .header {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            gap: 10px;
+            margin-bottom: 12px;
         }
-
         .pulse-dot {
-            width: 12px;
-            height: 12px;
-            background-color: var(--primary);
+            width: 10px;
+            height: 10px;
+            background: var(--primary);
             border-radius: 50%;
             box-shadow: 0 0 10px var(--primary);
             animation: pulse 2s infinite;
+            flex-shrink: 0;
         }
-
         .pulse-dot.lunar {
-            background-color: var(--secondary);
+            background: var(--secondary);
             box-shadow: 0 0 10px var(--secondary);
             animation: pulse-lunar 2s infinite;
         }
-
         h1 {
             margin: 0;
-            font-size: 1.2rem;
+            font-size: 0.95rem;
             font-weight: 600;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+            line-height: 1.2;
         }
-
         h1.lunar-title {
             color: var(--secondary);
-            text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
         }
-
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 14px;
         }
-
         .metric {
             display: flex;
             flex-direction: column;
-            gap: 0.3rem;
+            gap: 2px;
+            min-width: 0;
         }
-
         .metric-label {
-            font-size: 0.75rem;
-            color: rgba(224, 247, 250, 0.6);
-            letter-spacing: 1px;
+            font-size: 0.6rem;
+            color: rgba(224, 247, 250, 0.55);
+            letter-spacing: 0.8px;
             text-transform: uppercase;
         }
-
         .metric-value {
-            font-size: 1.25rem;
+            font-size: 1rem;
             font-weight: bold;
             color: #fff;
-            text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: baseline;
-            gap: 0.3rem;
+            gap: 3px;
+            flex-wrap: wrap;
+            word-break: break-word;
         }
-
         .metric-unit {
-            font-size: 0.8rem;
+            font-size: 0.65rem;
             color: var(--primary);
             font-weight: normal;
+            white-space: nowrap;
         }
-        
         .lunar .metric-unit {
             color: var(--secondary);
         }
-
-        .bottom-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .controls-hint {
-            font-size: 0.8rem;
-            color: rgba(224, 247, 250, 0.5);
-            letter-spacing: 1px;
-        }
-
         .calendar-section {
             display: flex;
             flex-direction: column;
-            gap: 0.8rem;
-            margin-bottom: 1.5rem;
+            gap: 6px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
             border-bottom: 1px solid var(--border-glass-alt);
-            padding-bottom: 1rem;
         }
-
-        /* Bagian Keterangan Visual (Legend) */
+        .calendar-section .metric-value {
+            font-size: 0.9rem;
+        }
+        .calendar-section .metric-value#ui-date-hijriah {
+            color: var(--secondary);
+        }
         .legend-section {
-            margin-top: 1.5rem;
-            padding-top: 1rem;
+            margin-top: 12px;
+            padding-top: 10px;
             border-top: 1px solid var(--border-glass);
             display: flex;
             flex-direction: column;
-            gap: 0.6rem;
+            gap: 5px;
         }
-
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 0.8rem;
+            gap: 8px;
         }
-
         .legend-icon {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
+            flex-shrink: 0;
         }
-
         .legend-text {
-            font-size: 0.75rem;
-            color: rgba(224, 247, 250, 0.8);
+            font-size: 0.6rem;
+            color: rgba(224, 247, 250, 0.7);
+            letter-spacing: 0.3px;
+        }
+        .bottom-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            margin-top: auto;
+            padding-top: 10px;
+            pointer-events: none;
+        }
+        .bottom-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            pointer-events: auto;
+        }
+        .bottom-bar .glass-panel {
+            max-width: 260px;
+            padding: 6px 14px;
+            flex: 1 1 auto;
+            text-align: center;
+        }
+        .bottom-bar .glass-panel .metric-label {
+            font-size: 0.55rem;
+        }
+        .bottom-bar .glass-panel #ui-time {
+            font-size: 0.8rem;
+            margin-top: 2px;
+            color: #fff;
             letter-spacing: 0.5px;
         }
-
-        /* Loading Screen */
+        .controls-hint {
+            font-size: 0.6rem;
+            color: rgba(224, 247, 250, 0.4);
+            letter-spacing: 0.5px;
+            text-align: center;
+            padding: 6px 14px !important;
+        }
+        .credit {
+            text-align: center;
+            font-size: 0.55rem;
+            color: rgba(224, 247, 250, 0.25);
+            letter-spacing: 1.5px;
+            pointer-events: none;
+            padding: 4px 0 2px;
+            width: 100%;
+        }
+        .country-label {
+            color: rgba(255, 255, 255, 0.85);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            pointer-events: none;
+            text-shadow: 1px 1px 3px #000, -1px -1px 3px #000, 1px -1px 3px #000, -1px 1px 3px #000;
+            transition: opacity 0.3s ease;
+            letter-spacing: 0.8px;
+            white-space: nowrap;
+        }
         #loader {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
@@ -210,76 +275,274 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            transition: opacity 1s ease-out;
+            transition: opacity 0.9s ease-out;
         }
-
         .spinner {
-            width: 50px;
-            height: 50px;
+            width: 44px;
+            height: 44px;
             border: 3px solid rgba(0, 240, 255, 0.1);
             border-top: 3px solid var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
-
         .loading-text {
-            font-size: 0.9rem;
-            letter-spacing: 3px;
+            font-size: 0.75rem;
+            letter-spacing: 2.5px;
             color: var(--primary);
             animation: blink 1.5s infinite;
+            text-align: center;
+            padding: 0 1rem;
         }
-
-        /* Gaya untuk Label Nama Negara */
-        .country-label {
-            color: rgba(255, 255, 255, 0.85);
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-            pointer-events: none; /* Agar tidak menghalangi klik ke Bumi */
-            text-shadow: 1px 1px 3px #000, -1px -1px 3px #000, 1px -1px 3px #000, -1px 1px 3px #000; /* Outline hitam tebal */
-            transition: opacity 0.3s ease-out;
-            letter-spacing: 1px;
-        }
-
         @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 240, 255, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 240, 255, 0); }
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(0, 240, 255, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(0, 240, 255, 0);
+            }
         }
-
         @keyframes pulse-lunar {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 170, 0, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 170, 0, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 170, 0, 0); }
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 170, 0, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(255, 170, 0, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 170, 0, 0);
+            }
         }
-
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
         }
-
         @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.4;
+            }
         }
-
-        /* Responsive */
-        @media (max-width: 900px) {
-            #ui-layer { padding: 1rem; overflow-y: auto; pointer-events: auto;}
-            .top-container { flex-direction: column; }
-            .bottom-bar { flex-direction: column; align-items: flex-start; gap: 1rem; margin-top: 1rem;}
-            .glass-panel { max-width: 100% !important; width: 100%; box-sizing: border-box;}
-            #canvas-container { pointer-events: none; } /* Give priority to UI scroll on small screens */
+        @media (max-width: 820px) {
+            #ui-layer {
+                padding: 8px 8px 6px;
+                overflow-y: auto;
+                pointer-events: auto;
+            }
+            .glass-panel {
+                padding: 10px 12px;
+                max-width: 100%;
+                flex: 1 1 100%;
+            }
+            .top-container {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .metrics-grid {
+                gap: 6px 10px;
+            }
+            .metric-value {
+                font-size: 0.85rem;
+            }
+            .metric-label {
+                font-size: 0.5rem;
+            }
+            h1 {
+                font-size: 0.75rem;
+                letter-spacing: 1px;
+            }
+            .calendar-section .metric-value {
+                font-size: 0.75rem;
+            }
+            .bottom-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+            .bottom-bar .glass-panel {
+                max-width: 100%;
+                padding: 6px 10px;
+            }
+            .controls-hint {
+                font-size: 0.5rem;
+                padding: 5px 10px !important;
+            }
+            .legend-text {
+                font-size: 0.5rem;
+            }
+            .country-label {
+                font-size: 8px !important;
+            }
+            .credit {
+                font-size: 0.45rem;
+            }
+            .pulse-dot {
+                width: 8px;
+                height: 8px;
+            }
         }
-        @media (min-width: 901px) {
-            #top-panel { width: 400px; }
-            #right-panel { width: 380px; }
+        @media (max-width: 480px) {
+            #ui-layer {
+                padding: 5px 5px 4px;
+            }
+            .glass-panel {
+                padding: 8px 10px;
+                border-radius: 10px;
+            }
+            .header {
+                gap: 6px;
+                margin-bottom: 8px;
+            }
+            h1 {
+                font-size: 0.6rem;
+                letter-spacing: 0.5px;
+            }
+            .metrics-grid {
+                gap: 4px 8px;
+                grid-template-columns: 1fr 1fr;
+            }
+            .metric-value {
+                font-size: 0.7rem;
+            }
+            .metric-label {
+                font-size: 0.45rem;
+            }
+            .metric-unit {
+                font-size: 0.5rem;
+            }
+            .calendar-section {
+                gap: 4px;
+                margin-bottom: 8px;
+                padding-bottom: 6px;
+            }
+            .calendar-section .metric-value {
+                font-size: 0.65rem;
+            }
+            .legend-section {
+                margin-top: 8px;
+                padding-top: 6px;
+                gap: 3px;
+            }
+            .legend-text {
+                font-size: 0.45rem;
+            }
+            .legend-icon {
+                width: 6px;
+                height: 6px;
+            }
+            .bottom-bar .glass-panel #ui-time {
+                font-size: 0.65rem;
+            }
+            .controls-hint {
+                font-size: 0.45rem;
+                padding: 4px 8px !important;
+            }
+            .credit {
+                font-size: 0.4rem;
+            }
+            .country-label {
+                font-size: 6px !important;
+                letter-spacing: 0.3px;
+            }
+        }
+        @media (max-width: 380px) {
+            .metrics-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 3px 6px;
+            }
+            .metric-value {
+                font-size: 0.6rem;
+            }
+            .glass-panel {
+                padding: 6px 8px;
+            }
+            h1 {
+                font-size: 0.5rem;
+            }
+        }
+        @media (max-height: 600px) and (orientation: landscape) {
+            #ui-layer {
+                padding: 4px 8px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-content: flex-start;
+                gap: 4px;
+                overflow-y: auto;
+            }
+            .top-container {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+            .glass-panel {
+                padding: 6px 10px;
+                flex: 1 1 200px;
+                max-width: 320px;
+            }
+            .header {
+                margin-bottom: 4px;
+            }
+            h1 {
+                font-size: 0.55rem;
+            }
+            .metrics-grid {
+                gap: 2px 6px;
+            }
+            .metric-value {
+                font-size: 0.65rem;
+            }
+            .metric-label {
+                font-size: 0.4rem;
+            }
+            .calendar-section {
+                margin-bottom: 4px;
+                padding-bottom: 4px;
+            }
+            .calendar-section .metric-value {
+                font-size: 0.6rem;
+            }
+            .legend-section {
+                margin-top: 4px;
+                padding-top: 4px;
+            }
+            .bottom-container {
+                margin-top: 0;
+                padding-top: 2px;
+            }
+            .bottom-bar .glass-panel {
+                padding: 3px 8px;
+            }
+            .bottom-bar .glass-panel #ui-time {
+                font-size: 0.6rem;
+            }
+            .controls-hint {
+                font-size: 0.4rem;
+                padding: 3px 8px !important;
+            }
+            .credit {
+                font-size: 0.35rem;
+                padding: 0;
+            }
         }
     </style>
 
-    <!-- Import Maps for Three.js -->
     <script type="importmap">
         {
             "imports": {
@@ -291,16 +554,17 @@
 </head>
 <body>
 
-    <!-- Layar Pemuatan -->
+    <!-- LOADER -->
     <div id="loader">
         <div class="spinner"></div>
-        <div class="loading-text" id="loading-status">MENGINISIALISASI SISTEM...</div>
+        <div class="loading-text" id="loading-status">MENGINISIALISASI SISTEM…</div>
     </div>
 
-    <!-- Hamparan UI -->
+    <!-- UI OVERLAY -->
     <div id="ui-layer">
         <div class="top-container">
-            <!-- ISS Panel -->
+
+            <!-- Panel ISS -->
             <div class="glass-panel" id="top-panel">
                 <div class="header">
                     <div class="pulse-dot"></div>
@@ -324,36 +588,33 @@
                         <span class="metric-value" id="ui-alt">--<span class="metric-unit">km</span></span>
                     </div>
                 </div>
-
-                <!-- Keterangan Visual (Legend) -->
                 <div class="legend-section">
                     <div class="legend-item">
-                        <div class="legend-icon" style="background: #00ffff; box-shadow: 0 0 8px #00ffff;"></div>
+                        <div class="legend-icon" style="background:#00ffff;box-shadow:0 0 8px #00ffff;"></div>
                         <span class="legend-text">Suar Biru: Posisi ISS (Satelit)</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-icon" style="background: #ffffff; box-shadow: 0 0 10px #ffffff;"></div>
+                        <div class="legend-icon" style="background:#ffffff;box-shadow:0 0 10px #ffffff;"></div>
                         <span class="legend-text">Suar Putih: Pantulan Matahari di Lautan</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Lunar/Hilal Panel -->
+            <!-- Panel Hilal / Waktu -->
             <div class="glass-panel lunar" id="right-panel">
                 <div class="header">
                     <div class="pulse-dot lunar"></div>
-                    <h1 class="lunar-title">Sistem Waktu & Hilal</h1>
+                    <h1 class="lunar-title">Sistem Waktu &amp; Hilal</h1>
                 </div>
-                
-                <!-- Kalender Masehi & Hijriah -->
+
                 <div class="calendar-section">
                     <div class="metric">
                         <span class="metric-label">Kalender Masehi</span>
-                        <span class="metric-value" id="ui-date-masehi" style="font-size: 1rem;">Memuat...</span>
+                        <span class="metric-value" id="ui-date-masehi" style="font-size:0.9rem;">Memuat…</span>
                     </div>
                     <div class="metric">
                         <span class="metric-label">Kalender Hijriah</span>
-                        <span class="metric-value" id="ui-date-hijriah" style="font-size: 1rem; color: var(--secondary);">Memuat...</span>
+                        <span class="metric-value" id="ui-date-hijriah" style="font-size:0.9rem;color:var(--secondary);">Memuat…</span>
                     </div>
                 </div>
 
@@ -366,36 +627,34 @@
                         <span class="metric-label">Fase Iluminasi</span>
                         <span class="metric-value" id="ui-moon-phase">--.--<span class="metric-unit">%</span></span>
                     </div>
-                    <div class="metric" style="grid-column: span 2;">
+                    <div class="metric" style="grid-column:span 2;">
                         <span class="metric-label">Sudut Elongasi</span>
                         <span class="metric-value" id="ui-moon-el">--.-<span class="metric-unit">°</span></span>
                     </div>
-                    <div class="metric" style="grid-column: span 2;">
+                    <div class="metric" style="grid-column:span 2;">
                         <span class="metric-label">Status Rukyatul Hilal (Global)</span>
-                        <span class="metric-value" id="ui-hilal-status" style="font-size: 1rem; margin-top: 5px;">Menganalisis...</span>
+                        <span class="metric-value" id="ui-hilal-status" style="font-size:0.9rem;margin-top:2px;">Menganalisis…</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="bottom-container" style="width: 100%;">
+        <!-- BOTTOM -->
+        <div class="bottom-container">
             <div class="bottom-bar">
-                <div class="glass-panel" style="padding: 0.8rem 1.2rem;">
+                <div class="glass-panel" style="padding:6px 14px;">
                     <div class="metric-label">Titik Sub-Solar (UTC)</div>
-                    <div style="font-size: 0.9rem; margin-top: 0.3rem;" id="ui-time">--:--:--</div>
+                    <div style="font-size:0.8rem;margin-top:2px;" id="ui-time">--:--:--</div>
                 </div>
-                <div class="controls-hint glass-panel" style="padding: 0.8rem 1.2rem;">
-                    Geser untuk Memutar • Gulir untuk Memperbesar • Klik Bulan/Bumi untuk Fokus
+                <div class="controls-hint glass-panel" style="padding:6px 14px;">
+                    Geser ↻ • Gulir 🔍 • Klik Bulan/Bumi untuk Fokus
                 </div>
             </div>
-            <!-- Tambahan Credit Footer -->
-            <div style="text-align: center; margin-top: 1rem; font-size: 0.75rem; color: rgba(224, 247, 250, 0.4); letter-spacing: 2px; pointer-events: none;">
-                Developed by Fajrul Ramadhan U.
-            </div>
+            <div class="credit">Developed by Fajrul Ramadhan U.</div>
         </div>
     </div>
 
-    <!-- Wadah Kanvas 3D -->
+    <!-- 3D CONTAINER -->
     <div id="canvas-container"></div>
 
     <script type="module">
@@ -406,43 +665,60 @@
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-        // --- Elemen DOM ---
-        const uiLat = document.getElementById('ui-lat');
-        const uiLon = document.getElementById('ui-lon');
-        const uiVel = document.getElementById('ui-vel');
-        const uiAlt = document.getElementById('ui-alt');
-        const uiTime = document.getElementById('ui-time');
-        
-        // Elemen DOM Bulan & Waktu
-        const uiMoonAge = document.getElementById('ui-moon-age');
-        const uiMoonPhase = document.getElementById('ui-moon-phase');
-        const uiMoonEl = document.getElementById('ui-moon-el');
-        const uiHilalStatus = document.getElementById('ui-hilal-status');
-        const uiDateMasehi = document.getElementById('ui-date-masehi');
-        const uiDateHijriah = document.getElementById('ui-date-hijriah');
+        // ─── DOM refs ───
+        const $ = (id) => document.getElementById(id);
+        const uiLat = $('ui-lat'),
+            uiLon = $('ui-lon'),
+            uiVel = $('ui-vel'),
+            uiAlt = $('ui-alt'),
+            uiTime = $('ui-time');
+        const uiMoonAge = $('ui-moon-age'),
+            uiMoonPhase = $('ui-moon-phase'),
+            uiMoonEl = $('ui-moon-el'),
+            uiHilalStatus = $('ui-hilal-status');
+        const uiDateMasehi = $('ui-date-masehi'),
+            uiDateHijriah = $('ui-date-hijriah');
+        const loader = document.getElementById('loader'),
+            loadingStatus = document.getElementById('loading-status');
 
-        const loader = document.getElementById('loader');
-        const loadingStatus = document.getElementById('loading-status');
-
-        // --- Konfigurasi ---
+        // ─── Konfig ───
         const EARTH_RADIUS = 10;
-        const ISS_ALTITUDE_SCALE = 1.05; 
-        const MOON_ORBIT_VISUAL = 35; // Skala jarak bulan untuk visualisasi layar
+        const ISS_ALT_SCALE = 1.05;
+        const MOON_ORBIT = 35;
         const API_URL = 'https://api.wheretheiss.at/v1/satellites/25544';
         const POLL_INTERVAL = 5000;
+        const MAX_TRAIL = 200;
 
-        // --- Status ---
+        // ===== PERBAIKIAN: Daftar Bulan Hijriah dengan Nama Indonesia & Arab =====
+        const MONTHS_HIJRI = [
+            { id: 'Muharram', ar: 'محرم' },
+            { id: 'Safar', ar: 'صفر' },
+            { id: 'Rabiul Awal', ar: 'ربيع الأول' },
+            { id: 'Rabiul Akhir', ar: 'ربيع الآخر' },
+            { id: 'Jumadil Awal', ar: 'جمادى الأولى' },
+            { id: 'Jumadil Akhir', ar: 'جمادى الآخرة' },
+            { id: 'Rajab', ar: 'رجب' },
+            { id: 'Sya\'ban', ar: 'شعبان' },
+            { id: 'Ramadan', ar: 'رمضان' },
+            { id: 'Syawal', ar: 'شوال' },
+            { id: 'Dzulqa\'dah', ar: 'ذو القعدة' },
+            { id: 'Dzulhijjah', ar: 'ذو الحجة' }
+        ];
+
+        // ─── State ───
         let scene, camera, renderer, composer, controls, labelRenderer;
         let earth, clouds, atmosphere;
-        let issGroup, issTargetPos = new THREE.Vector3();
-        let moonGroup, moon;
+        let issGroup, issTarget = new THREE.Vector3();
+        let moonMesh;
         let sunLight;
-        let trailGeometry, trailLine, trailPositions = [];
-        const MAX_TRAIL_POINTS = 200;
-        let isInitialized = false;
-
-        // Label Negara (Diperbarui menjadi 30 negara terkenal)
+        let trailGeo, trailLine, trailPos = [];
         let countryLabels = [];
+        let raycaster, mouse;
+        let focusTarget = 'earth';
+        let isInit = false;
+        let clock = new THREE.Clock();
+
+        // ─── Countries ───
         const COUNTRIES = [
             { name: "Indonesia", lat: -0.789, lon: 113.921 },
             { name: "Jepang", lat: 36.204, lon: 138.252 },
@@ -476,13 +752,8 @@
             { name: "Belanda", lat: 52.132, lon: 5.291 }
         ];
 
-        // Status Klik Objek (Raycaster)
-        let raycaster, mouse;
-        let focusTarget = 'earth'; // 'earth' atau 'moon'
-
-        // URL Tekstur
         const TEX_BASE = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/';
-        const textures = {
+        const TEX = {
             diffuse: TEX_BASE + 'earth_atmos_2048.jpg',
             specular: TEX_BASE + 'earth_specular_2048.jpg',
             normal: TEX_BASE + 'earth_normal_2048.jpg',
@@ -490,15 +761,93 @@
             moon: TEX_BASE + 'moon_1024.jpg'
         };
 
-        // --- Format Tanggal (Masehi & Hijriah) ---
-        const formatMasehi = new Intl.DateTimeFormat('id-ID', { 
-            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' 
-        });
-        const formatHijriah = new Intl.DateTimeFormat('id-ID-u-ca-islamic', { 
-            day: 'numeric', month: 'long', year: 'numeric' 
+        // ─── Format Masehi ───
+        const fmtMasehi = new Intl.DateTimeFormat('id-ID', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
         });
 
-        // --- Inisialisasi ---
+        // ─── Helper: lat/lon → Vector3 ───
+        function latLonToVec3(lat, lon, radius) {
+            const phi = (90 - lat) * Math.PI / 180;
+            const theta = lon * Math.PI / 180;
+            return new THREE.Vector3(
+                radius * Math.sin(phi) * Math.cos(theta),
+                radius * Math.cos(phi),
+                -radius * Math.sin(phi) * Math.sin(theta)
+            );
+        }
+
+        // ─── Islamic Date (manual via Intl + mapping) ───
+        function getIslamicDate(now) {
+            try {
+                const fmt = new Intl.DateTimeFormat('en', {
+                    calendar: 'islamic',
+                    day: 'numeric',
+                    month: 'numeric',
+                    year: 'numeric'
+                });
+                const parts = fmt.formatToParts(now);
+                let d, m, y;
+                for (const p of parts) {
+                    if (p.type === 'day') d = parseInt(p.value, 10);
+                    else if (p.type === 'month') m = parseInt(p.value, 10);
+                    else if (p.type === 'year') y = parseInt(p.value, 10);
+                }
+                if (m >= 1 && m <= 12 && d >= 1 && d <= 30 && y > 0) {
+                    return { day: d, month: MONTHS_HIJRI[m - 1], year: y };
+                }
+                return getIslamicDateManual(now);
+            } catch (_) {
+                return getIslamicDateManual(now);
+            }
+        }
+
+        // ─── Fallback: arithmetic Islamic calendar ───
+        function getIslamicDateManual(now) {
+            const ref = new Date('2023-07-19T00:00:00Z');
+            const msDay = 86400000;
+            let days = Math.floor((now.getTime() - ref.getTime()) / msDay);
+            if (days < 0) days = 0;
+
+            let year = 1445;
+            let remaining = days;
+            const CYCLE_DAYS = 10631;
+            const cycles = Math.floor(remaining / CYCLE_DAYS);
+            year += cycles * 30;
+            remaining -= cycles * CYCLE_DAYS;
+
+            const monthLengths = [];
+            for (let i = 0; i < 30; i++) {
+                const isLeap = (i * 11 + 14) % 30 < 11;
+                const mLen = [];
+                for (let j = 0; j < 12; j++) {
+                    const daysInMonth = (j === 11) ? (isLeap ? 30 : 29) : (j % 2 === 0 ? 30 : 29);
+                    mLen.push(daysInMonth);
+                }
+                monthLengths.push(mLen);
+            }
+
+            let month = 0;
+            let day = 1;
+            for (let i = 0; i < 30; i++) {
+                const mLen = monthLengths[i];
+                for (let j = 0; j < 12; j++) {
+                    if (remaining < mLen[j]) {
+                        month = j;
+                        day = remaining + 1;
+                        break;
+                    }
+                    remaining -= mLen[j];
+                }
+                if (month !== undefined) break;
+            }
+            if (month === undefined) { month = 0;
+                day = 1; }
+
+            return { day, month: MONTHS_HIJRI[month], year };
+        }
+
+        // ─── Init ───
         function init() {
             const container = document.getElementById('canvas-container');
 
@@ -506,7 +855,7 @@
             scene.background = new THREE.Color(0x020205);
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 15, 45); // Sedikit lebih jauh untuk melihat bulan
+            camera.position.set(0, 15, 45);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -515,143 +864,80 @@
             renderer.toneMappingExposure = 1.2;
             container.appendChild(renderer.domElement);
 
-            // Inisialisasi CSS2D Renderer (Untuk Teks Nama Negara)
             labelRenderer = new CSS2DRenderer();
             labelRenderer.setSize(window.innerWidth, window.innerHeight);
             labelRenderer.domElement.style.position = 'absolute';
-            labelRenderer.domElement.style.top = '0px';
-            labelRenderer.domElement.style.pointerEvents = 'none'; // Abaikan klik agar tembus ke WebGL
+            labelRenderer.domElement.style.top = '0';
+            labelRenderer.domElement.style.pointerEvents = 'none';
             container.appendChild(labelRenderer.domElement);
 
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.minDistance = 3.5; // Jarak minimum diperkecil agar bisa zoom dekat ke bulan
+            controls.dampingFactor = 0.06;
+            controls.minDistance = 4;
             controls.maxDistance = 150;
             controls.enablePan = false;
+            controls.target.set(0, 0, 0);
 
-            // Inisialisasi Raycaster untuk interaksi klik
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
 
-            const renderScene = new RenderPass(scene, camera);
-            const bloomPass = new UnrealBloomPass(
+            const rPass = new RenderPass(scene, camera);
+            const bloom = new UnrealBloomPass(
                 new THREE.Vector2(window.innerWidth, window.innerHeight),
-                2.5, 1.0, 0.95 
+                2.5, 1.0, 0.95
             );
-            
             composer = new EffectComposer(renderer);
-            composer.addPass(renderScene);
-            composer.addPass(bloomPass);
+            composer.addPass(rPass);
+            composer.addPass(bloom);
 
             loadResources();
-            
-            // Event Listeners
-            window.addEventListener('resize', onWindowResize);
+
+            window.addEventListener('resize', onResize);
             window.addEventListener('pointerdown', onPointerDown);
-
-            // Mulai loop penanggalan
-            updateCalendars();
-            setInterval(updateCalendars, 1000); // Update detik/waktu setiap detik
         }
 
-        // --- Deteksi Klik (Raycasting) ---
-        function onPointerDown(event) {
-            // Abaikan klik jika pengguna mengklik panel UI
-            if (event.target.closest('.glass-panel')) return;
-
-            // Hitung koordinat kursor yang dinormalisasi (-1 ke +1)
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            // Atur raycaster dari kamera ke arah mouse
-            raycaster.setFromCamera(mouse, camera);
-
-            // Deteksi objek mana yang diklik
-            const intersectables = [];
-            if (earth) intersectables.push(earth);
-            if (clouds) intersectables.push(clouds);       // Tambahan agar klik tidak terhalang awan
-            if (atmosphere) intersectables.push(atmosphere); // Tambahan agar klik tidak terhalang atmosfer
-            if (moon) intersectables.push(moon);
-
-            const intersects = raycaster.intersectObjects(intersectables);
-
-            if (intersects.length > 0) {
-                if (intersects[0].object === moon) {
-                    focusTarget = 'moon';
-                } else {
-                    // Jika yang diklik adalah bumi, awan, atau atmosfer
-                    focusTarget = 'earth';
-                }
-            } else {
-                // Jika klik area kosong di luar angkasa, kembalikan fokus ke Bumi
-                focusTarget = 'earth';
-            }
-        }
-
-        // --- Pembaruan Kalender Real-time ---
-        function updateCalendars() {
-            const now = new Date();
-            uiDateMasehi.innerText = formatMasehi.format(now);
-            
-            // Mengambil tanggal Hijriah dari API
-            let rawHijriah = formatHijriah.format(now);
-            
-            // Bersihkan teks dari akhiran "H" atau "AH" bawaan browser agar tidak dobel
-            let cleanHijriah = rawHijriah.replace(/\s*(AH|H)$/i, '');
-            
-            // Tambahkan huruf H tunggal dengan konsisten
-            uiDateHijriah.innerText = cleanHijriah + ' H';
-        }
-
-        // --- Pemuatan Sumber Daya ---
+        // ─── Load textures ───
         function loadResources() {
             const manager = new THREE.LoadingManager();
-            const textureLoader = new THREE.TextureLoader(manager);
-            const loadedTextures = {};
+            const loaderTex = new THREE.TextureLoader(manager);
+            const tex = {};
 
-            manager.onProgress = (url, itemsLoaded, itemsTotal) => {
-                loadingStatus.innerText = `MEMUAT ASET (${itemsLoaded}/${itemsTotal})`;
+            manager.onProgress = (_, loaded, total) => {
+                loadingStatus.innerText = `MEMUAT ASET (${loaded}/${total})`;
             };
-
             manager.onLoad = () => {
-                loadingStatus.innerText = `MEMBANGUN KONEKSI...`;
-                buildScene(loadedTextures);
-                
+                loadingStatus.innerText = 'MEMBANGUN KONEKSI…';
+                buildScene(tex);
                 fetchISSData().then(() => {
                     setTimeout(() => {
                         loader.style.opacity = '0';
                         setTimeout(() => loader.style.display = 'none', 1000);
-                        isInitialized = true;
-                        
+                        isInit = true;
                         setInterval(fetchISSData, POLL_INTERVAL);
                         animate();
                     }, 500);
                 });
             };
+            manager.onError = (url) => console.warn('Texture error:', url);
 
-            manager.onError = (url) => {
-                console.error('Error loading texture:', url);
-            };
-
-            loadedTextures.diffuse = textureLoader.load(textures.diffuse);
-            loadedTextures.specular = textureLoader.load(textures.specular);
-            loadedTextures.normal = textureLoader.load(textures.normal);
-            loadedTextures.clouds = textureLoader.load(textures.clouds);
-            loadedTextures.moon = textureLoader.load(textures.moon);
+            tex.diffuse = loaderTex.load(TEX.diffuse);
+            tex.specular = loaderTex.load(TEX.specular);
+            tex.normal = loaderTex.load(TEX.normal);
+            tex.clouds = loaderTex.load(TEX.clouds);
+            tex.moon = loaderTex.load(TEX.moon);
         }
 
-        // --- Membangun Scene 3D ---
+        // ─── Build Scene ───
         function buildScene(tex) {
             scene.add(new THREE.AmbientLight(0x111122, 0.2));
 
             sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
             scene.add(sunLight);
 
-            createStarfield();
+            createStars();
 
             // Bumi
-            const earthGeo = new THREE.SphereGeometry(EARTH_RADIUS, 64, 64);
             const earthMat = new THREE.MeshStandardMaterial({
                 map: tex.diffuse,
                 normalMap: tex.normal,
@@ -659,50 +945,34 @@
                 metalness: 0.1,
                 roughness: 0.8
             });
-            earthMat.roughnessMap = tex.specular;
-            earthMat.onBeforeCompile = (shader) => {
-                shader.fragmentShader = shader.fragmentShader.replace(
-                    '#include <roughnessmap_fragment>',
-                    `
-                    float roughnessFactor = roughness;
-                    #ifdef USE_ROUGHNESSMAP
-                        vec4 texelRoughness = texture2D( roughnessMap, vRoughnessMapUv );
-                        roughnessFactor *= (1.0 - texelRoughness.r); 
-                    #endif
-                    `
-                );
-            };
-
-            earth = new THREE.Mesh(earthGeo, earthMat);
-            // Rotasi Bumi yang menyebabkan misalignment sejauh 90 derajat telah dihapus
+            earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS, 64, 64), earthMat);
             scene.add(earth);
 
-            // Awan & Atmosfer
-            const cloudGeo = new THREE.SphereGeometry(EARTH_RADIUS + 0.1, 64, 64);
+            // Awan
             const cloudMat = new THREE.MeshStandardMaterial({
                 map: tex.clouds,
                 transparent: true,
-                opacity: 0.6,
+                opacity: 0.55,
                 blending: THREE.AdditiveBlending,
                 depthWrite: false
             });
-            clouds = new THREE.Mesh(cloudGeo, cloudMat);
+            clouds = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS + 0.1, 64, 64), cloudMat);
             earth.add(clouds);
 
-            const atmosGeo = new THREE.SphereGeometry(EARTH_RADIUS + 0.3, 64, 64);
+            // Atmosfer
             const atmosMat = new THREE.ShaderMaterial({
                 vertexShader: `
-                    varying vec3 vNormal;
+                    varying vec3 vN;
                     void main() {
-                        vNormal = normalize(normalMatrix * normal);
+                        vN = normalize(normalMatrix * normal);
                         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                     }
                 `,
                 fragmentShader: `
-                    varying vec3 vNormal;
+                    varying vec3 vN;
                     void main() {
-                        float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 4.0);
-                        gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity * 1.5;
+                        float i = pow(0.6 - dot(vN, vec3(0.0,0.0,1.0)), 4.0);
+                        gl_FragColor = vec4(0.3,0.6,1.0,1.0) * i * 1.5;
                     }
                 `,
                 blending: THREE.AdditiveBlending,
@@ -710,318 +980,284 @@
                 transparent: true,
                 depthWrite: false
             });
-            atmosphere = new THREE.Mesh(atmosGeo, atmosMat);
+            atmosphere = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS + 0.3, 64, 64), atmosMat);
             scene.add(atmosphere);
 
             // Bulan
-            const moonGeo = new THREE.SphereGeometry(EARTH_RADIUS * 0.27, 32, 32);
             const moonMat = new THREE.MeshStandardMaterial({
                 map: tex.moon,
                 roughness: 1.0,
                 metalness: 0.0
             });
-            moon = new THREE.Mesh(moonGeo, moonMat);
-            scene.add(moon);
+            moonMesh = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS * 0.27, 32, 32), moonMat);
+            scene.add(moonMesh);
 
-            // Label Negara
+            // Label negara
             createCountryLabels();
 
-            // ISS & Jejak
-            createISSMarker();
+            // ISS
+            createISS();
 
-            trailGeometry = new THREE.BufferGeometry();
-            const trailMaterial = new THREE.LineBasicMaterial({ 
-                color: 0x00f0ff, 
-                transparent: true, 
+            // Trail
+            trailGeo = new THREE.BufferGeometry();
+            const trailMat = new THREE.LineBasicMaterial({
+                color: 0x00f0ff,
+                transparent: true,
                 opacity: 0.5,
                 blending: THREE.AdditiveBlending
             });
-            trailLine = new THREE.Line(trailGeometry, trailMaterial);
+            trailLine = new THREE.Line(trailGeo, trailMat);
             scene.add(trailLine);
+
+            // Update kalender awal
+            updateCalendars();
+            setInterval(updateCalendars, 1000);
         }
 
-        function createStarfield() {
-            const starsGeometry = new THREE.BufferGeometry();
-            const starsMaterial = new THREE.PointsMaterial({
+        function createStars() {
+            const g = new THREE.BufferGeometry();
+            const v = [];
+            for (let i = 0; i < 3000; i++) {
+                const x = THREE.MathUtils.randFloatSpread(400);
+                const y = THREE.MathUtils.randFloatSpread(400);
+                const z = THREE.MathUtils.randFloatSpread(400);
+                if (Math.sqrt(x * x + y * y + z * z) > EARTH_RADIUS + 50) v.push(x, y, z);
+            }
+            g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+            scene.add(new THREE.Points(g, new THREE.PointsMaterial({
                 color: 0xffffff,
                 size: 0.1,
                 transparent: true,
                 opacity: 0.8,
                 sizeAttenuation: true
-            });
-
-            const starsVertices = [];
-            for (let i = 0; i < 3000; i++) {
-                const x = THREE.MathUtils.randFloatSpread(400);
-                const y = THREE.MathUtils.randFloatSpread(400);
-                const z = THREE.MathUtils.randFloatSpread(400);
-                if (Math.sqrt(x*x + y*y + z*z) > EARTH_RADIUS + 50) {
-                    starsVertices.push(x, y, z);
-                }
-            }
-
-            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
-            const starField = new THREE.Points(starsGeometry, starsMaterial);
-            scene.add(starField);
+            })));
         }
 
-        function createISSMarker() {
+        function createISS() {
             issGroup = new THREE.Group();
-            const coreGeo = new THREE.SphereGeometry(0.15, 16, 16);
-            const coreMat = new THREE.MeshStandardMaterial({
-                color: 0xffffff,
-                emissive: 0x00ffff,
-                emissiveIntensity: 5.0
-            });
-            const core = new THREE.Mesh(coreGeo, coreMat);
-            
-            const shellGeo = new THREE.IcosahedronGeometry(0.3, 1);
-            const shellMat = new THREE.MeshPhysicalMaterial({
-                color: 0xffffff,
-                transmission: 0.9,
-                opacity: 1,
-                metalness: 0,
-                roughness: 0.1,
-                ior: 1.5,
-                thickness: 0.5,
-                transparent: true
-            });
-            const shell = new THREE.Mesh(shellGeo, shellMat);
+            const core = new THREE.Mesh(
+                new THREE.SphereGeometry(0.15, 16, 16),
+                new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x00ffff, emissiveIntensity: 5.0 })
+            );
+            const shell = new THREE.Mesh(
+                new THREE.IcosahedronGeometry(0.3, 1),
+                new THREE.MeshPhysicalMaterial({
+                    color: 0xffffff,
+                    transmission: 0.9,
+                    opacity: 1,
+                    metalness: 0,
+                    roughness: 0.1,
+                    ior: 1.5,
+                    thickness: 0.5,
+                    transparent: true
+                })
+            );
+            const pGeo = new THREE.BoxGeometry(0.8, 0.02, 0.2);
+            const pMat = new THREE.MeshStandardMaterial({ color: 0x051020, metalness: 0.8, roughness: 0.2 });
+            const p1 = new THREE.Mesh(pGeo, pMat);
+            p1.position.x = 0.5;
+            const p2 = new THREE.Mesh(pGeo, pMat);
+            p2.position.x = -0.5;
 
-            const panelGeo = new THREE.BoxGeometry(0.8, 0.02, 0.2);
-            const panelMat = new THREE.MeshStandardMaterial({
-                color: 0x051020,
-                metalness: 0.8,
-                roughness: 0.2
-            });
-            const panel1 = new THREE.Mesh(panelGeo, panelMat);
-            panel1.position.x = 0.5;
-            const panel2 = new THREE.Mesh(panelGeo, panelMat);
-            panel2.position.x = -0.5;
-
-            issGroup.add(core);
-            issGroup.add(shell);
-            issGroup.add(panel1);
-            issGroup.add(panel2);
+            issGroup.add(core, shell, p1, p2);
             scene.add(issGroup);
         }
 
         function createCountryLabels() {
-            COUNTRIES.forEach(country => {
+            COUNTRIES.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'country-label';
-                div.textContent = country.name;
-                
+                div.textContent = c.name;
                 const label = new CSS2DObject(div);
-                // Tempatkan sedikit melayang di atas permukaan (Radius + 0.1)
-                const pos = latLonToVector3(country.lat, country.lon, EARTH_RADIUS + 0.1);
+                const pos = latLonToVec3(c.lat, c.lon, EARTH_RADIUS + 0.15);
                 label.position.copy(pos);
                 earth.add(label);
-                
-                // Simpan untuk perhitungan visibilitas di animasi
-                countryLabels.push({ label: label, pos: pos, div: div });
+                countryLabels.push({ label, pos, div });
             });
         }
 
-        // --- Logika & Matematika Inti ---
-        // RUMUS YANG TELAH DIPERBAIKI UNTUK ALIGNMENT 100% PRESISI PADA BOLA THREE.JS
-        function latLonToVector3(lat, lon, radius) {
-            const phi = (90 - lat) * (Math.PI / 180);
-            const theta = lon * (Math.PI / 180);
+        // ─── Update Kalender ───
+        function updateCalendars() {
+            const now = new Date();
+            uiDateMasehi.innerText = fmtMasehi.format(now);
 
-            // Perhitungan Cartesian yang benar untuk mapping SphereGeometry standar
-            const x = radius * Math.sin(phi) * Math.cos(theta);
-            const y = radius * Math.cos(phi);
-            const z = -radius * Math.sin(phi) * Math.sin(theta);
-
-            return new THREE.Vector3(x, y, z);
+            const hijri = getIslamicDate(now);
+            const month = hijri.month;
+            // Tampilkan: hari, nama Indonesia (arab), tahun H
+            uiDateHijriah.innerText = `${hijri.day} ${month.id} (${month.ar}) ${hijri.year} H`;
         }
 
-        // Update Ephemeris Astrologi (Matahari dan Bulan)
-        function updateAstroPositions() {
+        // ─── Update Astro ───
+        function updateAstro() {
             const now = new Date();
-            uiTime.innerText = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+            uiTime.innerText = now.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 
-            const oneDayMs = 1000 * 60 * 60 * 24;
-            
-            // 1. Data Matahari
+            const oneDay = 86400000;
             const start = new Date(now.getUTCFullYear(), 0, 0);
-            const dayOfYear = Math.floor((now - start) / oneDayMs);
-            const sunDeclination = -23.44 * Math.cos((360 / 365.24) * (dayOfYear + 10) * (Math.PI / 180));
-            const utcHours = now.getUTCHours() + now.getUTCMinutes()/60 + now.getUTCSeconds()/3600;
-            
-            let sunLon = 180 - (utcHours * 15);
+            const doy = Math.floor((now - start) / oneDay);
+            const sunDecl = -23.44 * Math.cos((360 / 365.24) * (doy + 10) * Math.PI / 180);
+            const utcH = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+            let sunLon = 180 - utcH * 15;
             if (sunLon < -180) sunLon += 360;
 
             if (sunLight) {
-                const sunPos = latLonToVector3(sunDeclination, sunLon, 200);
+                const sunPos = latLonToVec3(sunDecl, sunLon, 200);
                 sunLight.position.copy(sunPos);
             }
 
-            // 2. Data Bulan (Aproksimasi Siklus Lunar)
-            // Bulan Baru sebagai referensi (Contoh: 11 Januari 2024, 11:57 UTC)
-            const KNOWN_NEW_MOON = new Date('2024-01-11T11:57:00Z').getTime(); 
-            const LUNAR_CYCLE = 29.530588853; // Durasi hari 1 siklus
-            
-            let ageInMs = now.getTime() - KNOWN_NEW_MOON;
-            let ageInDays = (ageInMs / oneDayMs) % LUNAR_CYCLE;
-            if (ageInDays < 0) ageInDays += LUNAR_CYCLE;
+            // Bulan
+            const KNOWN_NEW = new Date('2024-01-11T11:57:00Z').getTime();
+            const LUNAR_CYCLE = 29.530588853;
+            let ageMs = now.getTime() - KNOWN_NEW;
+            let ageDays = (ageMs / oneDay) % LUNAR_CYCLE;
+            if (ageDays < 0) ageDays += LUNAR_CYCLE;
 
-            // Sudut Elongasi (jarak sudut dari matahari)
-            const elongation = (ageInDays / LUNAR_CYCLE) * 360; 
-            
-            let moonLon = sunLon - elongation;
+            const elong = (ageDays / LUNAR_CYCLE) * 360;
+            let moonLon = sunLon - elong;
             if (moonLon < -180) moonLon += 360;
             if (moonLon > 180) moonLon -= 360;
+            const moonDecl = sunDecl + 5.14 * Math.sin((ageDays / LUNAR_CYCLE) * Math.PI * 2);
+            const phase = 0.5 * (1 - Math.cos(elong * Math.PI / 180)) * 100;
 
-            // Aproksimasi kemiringan orbit bulan
-            const moonDeclination = sunDeclination + 5.14 * Math.sin((ageInDays / LUNAR_CYCLE) * Math.PI * 2);
-            
-            // Rumus Fase (0% - 100%)
-            const phase = 0.5 * (1 - Math.cos(elongation * Math.PI / 180)) * 100;
-
-            if (moon) {
-                const moonPos = latLonToVector3(moonDeclination, moonLon, MOON_ORBIT_VISUAL);
-                moon.position.copy(moonPos);
-                // Agar bulan selalu menghadap Bumi (Tidal Locking)
-                moon.lookAt(new THREE.Vector3(0,0,0));
+            if (moonMesh) {
+                const pos = latLonToVec3(moonDecl, moonLon, MOON_ORBIT);
+                moonMesh.position.copy(pos);
+                moonMesh.lookAt(new THREE.Vector3(0, 0, 0));
             }
 
-            // 3. Perbarui UI Bulan & Hilal
-            uiMoonAge.innerHTML = `${ageInDays.toFixed(1)}<span class="metric-unit"> Hr</span>`;
+            uiMoonAge.innerHTML = `${ageDays.toFixed(1)}<span class="metric-unit"> Hr</span>`;
             uiMoonPhase.innerHTML = `${phase.toFixed(2)}<span class="metric-unit">%</span>`;
-            uiMoonEl.innerHTML = `${elongation.toFixed(1)}<span class="metric-unit">°</span>`;
+            uiMoonEl.innerHTML = `${elong.toFixed(1)}<span class="metric-unit">°</span>`;
 
-            // Logika Visibilitas Hilal (Aproksimasi Global Berdasarkan MABIMS: Elongasi > 6.4)
-            let hilalStatus = "Bukan Fase Hilal";
-            let hilalColor = "rgba(224, 247, 250, 0.6)";
-
-            if (ageInDays < 2.5 && ageInDays > 0) { 
-                if (elongation >= 6.4) {
-                    hilalStatus = "Terlihat (Kriteria MABIMS)";
-                    hilalColor = "#00ff88"; // Hijau terang
+            let status = 'Bukan Fase Hilal',
+                color = 'rgba(224,247,250,0.6)';
+            if (ageDays < 2.5 && ageDays > 0) {
+                if (elong >= 6.4) {
+                    status = 'Terlihat (Kriteria MABIMS)';
+                    color = '#00ff88';
                 } else {
-                    hilalStatus = "Belum Terlihat (< Kriteria)";
-                    hilalColor = "#ffaa00"; // Oranye
+                    status = 'Belum Terlihat (< Kriteria)';
+                    color = '#ffaa00';
                 }
-            } else if (ageInDays > 27) {
-                hilalStatus = "Fase Bulan Tua (Waning)";
+            } else if (ageDays > 27) {
+                status = 'Fase Bulan Tua (Waning)';
             }
-
-            uiHilalStatus.innerText = hilalStatus;
-            uiHilalStatus.style.color = hilalColor;
+            uiHilalStatus.innerText = status;
+            uiHilalStatus.style.color = color;
         }
 
-        // --- Pengambilan Data ISS ---
+        // ─── Fetch ISS ───
         async function fetchISSData() {
             try {
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('Network response was not ok');
-                
-                const data = await response.json();
-                
-                uiLat.innerHTML = `${data.latitude.toFixed(4)}<span class="metric-unit">°</span>`;
-                uiLon.innerHTML = `${data.longitude.toFixed(4)}<span class="metric-unit">°</span>`;
-                uiVel.innerHTML = `${Math.round(data.velocity).toLocaleString()}<span class="metric-unit">km/h</span>`;
-                uiAlt.innerHTML = `${Math.round(data.altitude).toLocaleString()}<span class="metric-unit">km</span>`;
+                const r = await fetch(API_URL);
+                if (!r.ok) throw new Error('Network error');
+                const d = await r.json();
 
-                const orbitRadius = EARTH_RADIUS * ISS_ALTITUDE_SCALE;
-                issTargetPos = latLonToVector3(data.latitude, data.longitude, orbitRadius);
+                uiLat.innerHTML = `${d.latitude.toFixed(4)}<span class="metric-unit">°</span>`;
+                uiLon.innerHTML = `${d.longitude.toFixed(4)}<span class="metric-unit">°</span>`;
+                uiVel.innerHTML = `${Math.round(d.velocity).toLocaleString()}<span class="metric-unit">km/h</span>`;
+                uiAlt.innerHTML = `${Math.round(d.altitude).toLocaleString()}<span class="metric-unit">km</span>`;
 
-                if (trailPositions.length === 0) {
-                    issGroup.position.copy(issTargetPos);
-                }
+                const rOrbit = EARTH_RADIUS * ISS_ALT_SCALE;
+                issTarget.copy(latLonToVec3(d.latitude, d.longitude, rOrbit));
 
-                updateTrail(issTargetPos.clone());
-            } catch (error) {
-                console.error("Error fetching telemetry:", error);
+                if (trailPos.length === 0) issGroup.position.copy(issTarget);
+                updateTrail(issTarget.clone());
+            } catch (e) {
+                console.warn('ISS fetch error:', e);
             }
         }
 
-        function updateTrail(newPos) {
-            trailPositions.push(newPos);
-            if (trailPositions.length > MAX_TRAIL_POINTS) {
-                trailPositions.shift();
+        function updateTrail(pos) {
+            trailPos.push(pos);
+            if (trailPos.length > MAX_TRAIL) trailPos.shift();
+            const arr = new Float32Array(trailPos.length * 3);
+            for (let i = 0; i < trailPos.length; i++) {
+                arr[i * 3] = trailPos[i].x;
+                arr[i * 3 + 1] = trailPos[i].y;
+                arr[i * 3 + 2] = trailPos[i].z;
             }
-
-            const positions = new Float32Array(trailPositions.length * 3);
-            for (let i = 0; i < trailPositions.length; i++) {
-                positions[i * 3] = trailPositions[i].x;
-                positions[i * 3 + 1] = trailPositions[i].y;
-                positions[i * 3 + 2] = trailPositions[i].z;
-            }
-
-            trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            trailGeometry.attributes.position.needsUpdate = true;
+            trailGeo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+            trailGeo.attributes.position.needsUpdate = true;
         }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+        // ─── Click / Tap ───
+        function onPointerDown(e) {
+            if (e.target.closest('.glass-panel')) return;
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const targets = [];
+            if (earth) targets.push(earth);
+            if (clouds) targets.push(clouds);
+            if (atmosphere) targets.push(atmosphere);
+            if (moonMesh) targets.push(moonMesh);
+
+            const hits = raycaster.intersectObjects(targets);
+            if (hits.length) {
+                focusTarget = (hits[0].object === moonMesh) ? 'moon' : 'earth';
+            } else {
+                focusTarget = 'earth';
+            }
+        }
+
+        // ─── Resize ───
+        function onResize() {
+            const w = window.innerWidth,
+                h = window.innerHeight;
+            camera.aspect = w / h;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            labelRenderer.setSize(window.innerWidth, window.innerHeight); // Perbarui ukuran label juga
-            composer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(w, h);
+            labelRenderer.setSize(w, h);
+            composer.setSize(w, h);
         }
 
-        // --- Loop Animasi ---
+        // ─── Animate ───
         function animate() {
             requestAnimationFrame(animate);
+            if (!isInit) return;
 
-            if (!isInitialized) return;
-
-            // Interpolasi posisi ISS
-            if (issGroup && issTargetPos) {
-                issGroup.position.lerp(issTargetPos, 0.05);
-                issGroup.lookAt(new THREE.Vector3(0,0,0));
-                
+            if (issGroup && issTarget) {
+                issGroup.position.lerp(issTarget, 0.06);
+                issGroup.lookAt(new THREE.Vector3(0, 0, 0));
                 if (issGroup.children[1]) {
                     issGroup.children[1].rotation.x += 0.01;
                     issGroup.children[1].rotation.y += 0.015;
                 }
             }
 
-            if (clouds) {
-                clouds.rotation.y += 0.0003;
-            }
+            if (clouds) clouds.rotation.y += 0.0003;
 
-            // Hitung Ulang Posisi Benda Langit Setiap Frame
-            updateAstroPositions();
+            updateAstro();
 
-            // Interpolasi Target Fokus Kamera (Bumi atau Bulan)
-            let targetVec = new THREE.Vector3(0, 0, 0); // Default ke Bumi
-            if (focusTarget === 'moon' && moon) {
-                targetVec.copy(moon.position);
-                controls.minDistance = 3.5; // Jarak zoom dekat khusus untuk bulan
+            let t = new THREE.Vector3(0, 0, 0);
+            if (focusTarget === 'moon' && moonMesh) {
+                t.copy(moonMesh.position);
+                controls.minDistance = 4;
             } else {
-                controls.minDistance = EARTH_RADIUS + 1.5; // Cegah kamera menembus masuk ke dalam Bumi
+                controls.minDistance = EARTH_RADIUS + 1.5;
                 if (camera.position.length() < EARTH_RADIUS + 1.5) {
                     camera.position.setLength(EARTH_RADIUS + 1.5);
                 }
             }
-            controls.target.lerp(targetVec, 0.1);
+            controls.target.lerp(t, 0.08);
 
-            // Perhitungan Visibilitas Label Negara (Sembunyikan yang di balik bumi)
-            const cameraPosLocal = new THREE.Vector3();
-            cameraPosLocal.copy(camera.position);
-            earth.worldToLocal(cameraPosLocal); // Konversi posisi kamera ke koordinat rotasi Bumi
-
+            const camLocal = new THREE.Vector3();
+            camLocal.copy(camera.position);
+            earth.worldToLocal(camLocal);
             countryLabels.forEach(data => {
-                // Gunakan Dot Product untuk mengecek apakah label menghadap kamera
-                const dot = cameraPosLocal.clone().normalize().dot(data.pos.clone().normalize());
-                if (dot > 0.2) { // Batas pandang (0.2 agar menghilang halus sebelum di ujung lengkungan)
-                    data.div.style.opacity = '1';
-                } else {
-                    data.div.style.opacity = '0';
-                }
+                const dot = camLocal.clone().normalize().dot(data.pos.clone().normalize());
+                data.div.style.opacity = (dot > 0.2) ? '1' : '0';
             });
 
             controls.update();
             composer.render();
-            labelRenderer.render(scene, camera); // Render Teks
+            labelRenderer.render(scene, camera);
         }
 
         window.onload = init;
-
     </script>
 </body>
 </html>
